@@ -283,4 +283,45 @@ SynthDef(\bruxa_sigil, {
 "  ELIXIR_BLEND (modDemix) | ELIXIR_COMPASS (X-PAN) | ELIXIR_CROWN (XOH)".postln;
 "  ELIXIR_FLUX (Dynamix) | ELIXIR_GATE (Rosie) | CHAOS_ORACLE (Wogglebug)".postln;
 "  STREGA_VESSEL (Strega) | COAST_ZERO (0-Coast) | BRUXA_SIGIL (Bruxa)".postln;
+
+// ==========================================
+// PATCH BAY REGISTRATION — Make Noise Utilities
+// ==========================================
+[
+    [\elixir_blend, [
+        [\crossfade, "A/B crossfade"]
+    ]],
+    [\elixir_compass, [
+        [\pan, "Pan position"], [\spread, "Stereo spread"]
+    ]],
+    [\elixir_flux, [
+        [\threshold, "Gate threshold"], [\attack, "Attack"], [\release, "Release"]
+    ]],
+    [\chaos_oracle, [
+        [\rate, "Clock rate"], [\smooth, "Smooth amount"],
+        [\steppy, "Stepped amount"]
+    ]],
+    [\strega_vessel, [
+        [\freq, "Oscillator frequency"], [\feedback, "Feedback"],
+        [\decay, "Delay decay"], [\filter, "Filter cutoff"]
+    ]],
+    [\coast_zero, [
+        [\freq, "Frequency"], [\slope, "Slope time"],
+        [\contour, "Contour amount"], [\multiply, "Multiply amount"]
+    ]],
+    [\bruxa_sigil, [
+        [\delayTimeL, "Left delay time"], [\delayTimeR, "Right delay time"],
+        [\feedback, "Feedback"], [\filterFreq, "Filter frequency"],
+        [\saturation, "Saturation"], [\mix, "Dry/wet mix"]
+    ]]
+].do({ |moduleSpec|
+    var synthName = moduleSpec[0];
+    var params = moduleSpec[1];
+    params.do({ |p|
+        ~PATCH_BAY.registerDestination(
+            (synthName.asString ++ "_" ++ p[0].asString).asSymbol,
+            p[0], synthName.asString ++ " " ++ p[1]
+        );
+    });
+});
 )

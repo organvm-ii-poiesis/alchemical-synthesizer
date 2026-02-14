@@ -295,5 +295,105 @@ SynthDef(\aion_freeze, {
     ReplaceOut.ar(outBus, sig);
 }).add;
 
-"--- BRAHMA: AION Time-Based FX Online (11 processors) ---".postln;
+// ==========================================
+// CONVOLUTION REVERB
+// ==========================================
+// Uses a loaded impulse response buffer for true convolution.
+// The IR buffer must be loaded separately before instantiation.
+// Use PartConv for efficient partitioned convolution.
+SynthDef(\aion_convolution, {
+    |inBus=0, outBus=0, mix=0.3, bypass=0,
+     irBufnum=0,         // Impulse response buffer (must be prepared with PartConv)
+     irSize=2048,        // FFT size for partitioned convolution
+     preDelay=0,         // Pre-delay in ms (0-200)
+     damping=0.3,        // HF damping on wet signal
+     level=1.0|          // Wet signal level
+
+    var input, dry, pre_delayed, convolved, dampened, sig;
+
+    input = In.ar(inBus, 1);
+    dry = input;
+
+    // Pre-delay
+    pre_delayed = DelayL.ar(input, 0.2, (preDelay.clip(0, 200) / 1000));
+
+    // Partitioned convolution (CPU-efficient for long IRs)
+    convolved = PartConv.ar(pre_delayed, irSize.clip(256, 8192), irBufnum);
+
+    // Damping: LP filter on wet signal
+    dampened = LPF.ar(convolved, (18000 * (1 - damping.clip(0, 0.9))).clip(500, 18000));
+
+    dampened = dampened * level.clip(0, 2);
+
+    sig = XFade2.ar(dry, dampened, mix.clip(0, 1) * 2 - 1);
+    sig = Select.ar(bypass.clip(0, 1), [sig, dry]);
+
+    ReplaceOut.ar(outBus, sig);
+}).add;
+
+"--- BRAHMA: AION Time-Based FX Online (12 processors) ---".postln;
+
+// ==========================================
+// PATCH BAY REGISTRATION — Time-Based FX
+// ==========================================
+[
+    [\aion_stereo_delay, [
+        [\timeL, "Left delay time"], [\timeR, "Right delay time"],
+        [\feedbackL, "Left feedback"], [\feedbackR, "Right feedback"],
+        [\filterFreq, "Filter frequency"], [\mix, "Dry/wet mix"]
+    ]],
+    [\aion_tape_delay, [
+        [\time, "Delay time"], [\feedback, "Feedback"],
+        [\wow, "Wow amount"], [\flutter, "Flutter amount"],
+        [\saturation, "Tape saturation"], [\speed, "Tape speed"],
+        [\mix, "Dry/wet mix"]
+    ]],
+    [\aion_multitap, [
+        [\feedback, "Tap feedback"], [\filterFreq, "Filter frequency"],
+        [\mix, "Dry/wet mix"]
+    ]],
+    [\aion_granular_delay, [
+        [\grainSize, "Grain size"], [\density, "Grain density"],
+        [\pitch, "Grain pitch"], [\feedback, "Feedback"],
+        [\time, "Delay time"], [\mix, "Dry/wet mix"]
+    ]],
+    [\aion_room, [
+        [\decay, "Reverb decay"], [\damping, "HF damping"],
+        [\size, "Room size"], [\mix, "Dry/wet mix"]
+    ]],
+    [\aion_hall, [
+        [\decay, "Hall decay"], [\damping, "HF damping"],
+        [\size, "Hall size"], [\preDelay, "Pre-delay"],
+        [\mix, "Dry/wet mix"]
+    ]],
+    [\aion_plate, [
+        [\decay, "Plate decay"], [\damping, "HF damping"],
+        [\brightness, "Brightness"], [\mix, "Dry/wet mix"]
+    ]],
+    [\aion_spring, [
+        [\decay, "Spring decay"], [\tension, "Spring tension"],
+        [\drip, "Drip amount"], [\mix, "Dry/wet mix"]
+    ]],
+    [\aion_shimmer, [
+        [\decay, "Shimmer decay"], [\damping, "HF damping"],
+        [\shimmerAmt, "Shimmer amount"], [\mix, "Dry/wet mix"]
+    ]],
+    [\aion_freeze, [
+        [\freeze, "Freeze toggle"], [\decay, "Decay time"],
+        [\mix, "Dry/wet mix"]
+    ]],
+    [\aion_convolution, [
+        [\preDelay, "Pre-delay ms"], [\damping, "HF damping"],
+        [\level, "Wet level"], [\mix, "Dry/wet mix"]
+    ]]
+].do({ |moduleSpec|
+    var synthName = moduleSpec[0];
+    var params = moduleSpec[1];
+    params.do({ |p|
+        ~PATCH_BAY.registerDestination(
+            (synthName.asString ++ "_" ++ p[0].asString).asSymbol,
+            p[0], synthName.asString ++ " " ++ p[1]
+        );
+    });
+});
 )

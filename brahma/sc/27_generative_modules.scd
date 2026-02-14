@@ -647,5 +647,215 @@ OSCdef(\serpens_list, { |msg|
 	});
 }, "/serpens/list");
 
-"--- BRAHMA: DAEMON Generative Suite Online (8 modules) ---".postln;
+// ==========================================
+// SYNTHDEF: LORENZ ATTRACTOR (3-axis chaotic CV)
+// ==========================================
+// Continuous Lorenz system producing 3 correlated chaotic CV outputs.
+// sigma, rho, beta control the attractor topology.
+// Classic chaotic regime: sigma=10, rho=28, beta=2.667
+// Rate controls the speed of evolution.
+SynthDef(\daemon_lorenz, {
+    |outBusX=0, outBusY=1, outBusZ=2,
+     sigma=10, rho=28, beta=2.667,
+     rate=1.0, scale=0.02|
+
+    var x, y, z, dt;
+    var fb = LocalIn.kr(3);
+
+    x = fb[0];
+    y = fb[1];
+    z = fb[2];
+
+    dt = rate.clip(0.01, 10) * ControlDur.ir;
+
+    // Lorenz differential equations
+    // dx/dt = sigma * (y - x)
+    // dy/dt = x * (rho - z) - y
+    // dz/dt = x * y - beta * z
+    x = x + (sigma.clip(0.1, 50) * (y - x) * dt);
+    y = y + ((fb[0] * (rho.clip(0.1, 100) - z) - y) * dt);
+    z = z + ((fb[0] * fb[1] - beta.clip(0.1, 20) * z) * dt);
+
+    // Prevent NaN/inf with soft clipping
+    x = x.clip(-100, 100);
+    y = y.clip(-100, 100);
+    z = z.clip(-100, 100);
+
+    // Seed with small random values if system collapses to zero
+    x = Select.kr((x.abs + y.abs + z.abs) < 0.001, [x, Rand(0.1, 1.0)]);
+
+    LocalOut.kr([x, y, z]);
+
+    // Scale to 0-1 CV range (Lorenz typically spans ~-30 to +30)
+    Out.kr(outBusX, (x * scale.clip(0.001, 1)).clip(-1, 1).linlin(-1, 1, 0, 1));
+    Out.kr(outBusY, (y * scale.clip(0.001, 1)).clip(-1, 1).linlin(-1, 1, 0, 1));
+    Out.kr(outBusZ, (z * scale.clip(0.001, 1)).clip(-1, 1).linlin(-1, 1, 0, 1));
+}).add;
+
+// ==========================================
+// SYNTHDEF: HENON MAP (2-axis chaotic CV)
+// ==========================================
+// Discrete Henon map producing 2 correlated chaotic CV outputs.
+// Classic chaotic regime: a=1.4, b=0.3
+// Each trigger advances the map one step.
+SynthDef(\daemon_henon, {
+    |outBusX=0, outBusY=1, trigBus=0,
+     a=1.4, b=0.3|
+
+    var trig, x, y, newX, newY;
+    var fb = LocalIn.kr(2);
+
+    trig = In.kr(trigBus, 1);
+
+    x = fb[0];
+    y = fb[1];
+
+    // Henon map equations:
+    // x_{n+1} = 1 - a * x_n^2 + y_n
+    // y_{n+1} = b * x_n
+    newX = 1 - (a.clip(0.1, 2.0) * x.squared) + y;
+    newY = b.clip(0.01, 1.0) * x;
+
+    // Latch: only advance on trigger
+    newX = Latch.kr(newX.clip(-2, 2), trig);
+    newY = Latch.kr(newY.clip(-2, 2), trig);
+
+    // Seed with small random value if collapsed
+    newX = Select.kr((newX.abs + newY.abs) < 0.0001, [newX, Rand(0.1, 0.5)]);
+
+    LocalOut.kr([newX, newY]);
+
+    // Scale to 0-1 CV range (Henon typically spans ~-1.5 to +1.5)
+    Out.kr(outBusX, newX.linlin(-1.5, 1.5, 0, 1).clip(0, 1));
+    Out.kr(outBusY, newY.linlin(-0.5, 0.5, 0, 1).clip(0, 1));
+}).add;
+
+// ==========================================
+// SYNTHDEF: ROSSLER ATTRACTOR (3-axis chaotic CV)
+// ==========================================
+// Continuous Rössler system: slower, more regular than Lorenz.
+// Produces quasi-periodic orbits that transition to chaos.
+// a, b, c control the topology. Classic: a=0.2, b=0.2, c=5.7
+SynthDef(\daemon_rossler, {
+    |outBusX=0, outBusY=1, outBusZ=2,
+     a=0.2, b=0.2, c=5.7,
+     rate=1.0, scale=0.05|
+
+    var x, y, z, dt;
+    var fb = LocalIn.kr(3);
+
+    x = fb[0];
+    y = fb[1];
+    z = fb[2];
+
+    dt = rate.clip(0.01, 10) * ControlDur.ir;
+
+    // Rössler differential equations
+    // dx/dt = -y - z
+    // dy/dt = x + a*y
+    // dz/dt = b + z*(x - c)
+    x = x + ((-1 * y - z) * dt);
+    y = y + ((fb[0] + (a.clip(0.01, 1) * y)) * dt);
+    z = z + ((b.clip(0.01, 2) + (z * (fb[0] - c.clip(0.1, 20)))) * dt);
+
+    // Prevent NaN/inf
+    x = x.clip(-100, 100);
+    y = y.clip(-100, 100);
+    z = z.clip(-100, 100);
+
+    // Seed if collapsed
+    x = Select.kr((x.abs + y.abs + z.abs) < 0.001, [x, Rand(0.1, 1.0)]);
+
+    LocalOut.kr([x, y, z]);
+
+    // Scale to 0-1 CV range
+    Out.kr(outBusX, (x * scale.clip(0.001, 1)).clip(-1, 1).linlin(-1, 1, 0, 1));
+    Out.kr(outBusY, (y * scale.clip(0.001, 1)).clip(-1, 1).linlin(-1, 1, 0, 1));
+    Out.kr(outBusZ, (z * scale.clip(0.001, 1)).clip(-1, 1).linlin(-1, 1, 0, 1));
+}).add;
+
+// OSC responders for chaos attractors
+OSCdef(\daemon_lorenz_create, { |msg|
+    var name = msg[1].asSymbol;
+    var sigma = (msg[2] ? 10).asFloat;
+    var rho = (msg[3] ? 28).asFloat;
+    var beta = (msg[4] ? 2.667).asFloat;
+    var synth = Synth(\daemon_lorenz, [
+        \sigma, sigma, \rho, rho, \beta, beta
+    ]);
+    ~DAEMON_SYNTH_INSTANCES[name] = synth;
+    "DAEMON: Lorenz attractor '%' created".format(name).postln;
+}, "/daemon/lorenz/create");
+
+OSCdef(\daemon_henon_create, { |msg|
+    var name = msg[1].asSymbol;
+    var a = (msg[2] ? 1.4).asFloat;
+    var b = (msg[3] ? 0.3).asFloat;
+    var synth = Synth(\daemon_henon, [\a, a, \b, b]);
+    ~DAEMON_SYNTH_INSTANCES[name] = synth;
+    "DAEMON: Henon map '%' created".format(name).postln;
+}, "/daemon/henon/create");
+
+OSCdef(\daemon_rossler_create, { |msg|
+    var name = msg[1].asSymbol;
+    var a = (msg[2] ? 0.2).asFloat;
+    var b = (msg[3] ? 0.2).asFloat;
+    var c = (msg[4] ? 5.7).asFloat;
+    var synth = Synth(\daemon_rossler, [\a, a, \b, b, \c, c]);
+    ~DAEMON_SYNTH_INSTANCES[name] = synth;
+    "DAEMON: Rossler attractor '%' created".format(name).postln;
+}, "/daemon/rossler/create");
+
+"--- BRAHMA: DAEMON Generative Suite Online (11 modules) ---".postln;
+
+// --- PATCH BAY REGISTRATION: Generative Modules ---
+if(~PATCH_BAY.notNil) {
+    // SynthDef-based generative modules (destinations for parameter modulation)
+    [
+        [\daemon_turing, [
+            [\probability, "mutation probability"],
+            [\bits, "sequence bit length"]
+        ]],
+        [\daemon_bernoulli_cascade, [
+            [\prob1, "branch 1 probability"],
+            [\prob2, "branch 2 probability"],
+            [\prob3, "branch 3 probability"]
+        ]],
+        [\daemon_clock_divider_random, [
+            [\density, "division density"]
+        ]],
+        [\daemon_prob_gate, [
+            [\probability, "gate probability"],
+            [\mode, "gate mode"]
+        ]],
+        [\daemon_lorenz, [
+            [\sigma, "Lorenz sigma"],
+            [\rho, "Lorenz rho"],
+            [\beta, "Lorenz beta"],
+            [\rate, "evolution rate"],
+            [\scale, "output scale"]
+        ]],
+        [\daemon_henon, [
+            [\a, "Henon a param"],
+            [\b, "Henon b param"]
+        ]],
+        [\daemon_rossler, [
+            [\a, "Rossler a param"],
+            [\b, "Rossler b param"],
+            [\c, "Rossler c param"],
+            [\rate, "evolution rate"],
+            [\scale, "output scale"]
+        ]]
+    ].do({ |moduleSpec|
+        var synthName = moduleSpec[0];
+        var params = moduleSpec[1];
+        params.do({ |p|
+            ~PATCH_BAY.registerDestination(
+                (synthName.asString ++ "_" ++ p[0].asString).asSymbol,
+                p[0], synthName.asString ++ " " ++ p[1]
+            );
+        });
+    });
+    "  -> Generative modules registered with Patch Bay".postln;
+};
 )

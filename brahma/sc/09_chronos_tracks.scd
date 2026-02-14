@@ -10,7 +10,7 @@
     // ==========================================
     // TRACK CREATION
     // ==========================================
-    // Track types: \note, \drum, \cv, \gate, \chord, \arpeggio
+    // Track types: \note, \drum, \cv, \gate, \chord, \arpeggio, \midi
     createTrack: { |self, type=\note, numSteps=16, division=16, name=""|
         var trackIdx = ~CHRONOS[\numActiveTracks];
 
@@ -72,7 +72,12 @@
             audioBus: nil,
 
             // Per-track FX send levels (into aux buses)
-            fxSends: Array.fill(8, 0.0)
+            fxSends: Array.fill(8, 0.0),
+
+            // MIDI output (for \midi track type)
+            midiChannel: 0,         // 0-15
+            midiPort: nil,          // MIDIOut instance (set via setTrackMidiPort)
+            midiCCMap: nil          // Dictionary of step -> [cc#, value] for CC automation
         );
 
         ~CHRONOS[\tracks] = ~CHRONOS[\tracks].add(track);
@@ -209,6 +214,46 @@
                     track[\audioBus].set(0);
                     nil;
                 });
+            };
+        }
+        { track[\type] == \midi } {
+            // Send MIDI note to external device
+            var port = track[\midiPort] ?? { ~BRAHMA_MIDI[\defaultOut] };
+            var ch = track[\midiChannel].clip(0, 15);
+            var note = stepData[\note] + stepData[\transpose];
+            var vel = stepData[\velocity].clip(0, 127);
+            var dur = stepData[\length] * 60 / ~CHRONOS[\tempo] / 96;
+
+            if(port.notNil) {
+                // Send note on
+                port.noteOn(ch, note.clip(0, 127), vel);
+
+                // Schedule note off
+                SystemClock.sched(dur.max(0.01), {
+                    port.noteOff(ch, note.clip(0, 127), 0);
+                    nil;
+                });
+
+                // Send CC automation from p-locks if present
+                if(track[\midiCCMap].notNil) {
+                    var ccData = track[\midiCCMap][step];
+                    if(ccData.notNil) {
+                        ccData.keysValuesDo({ |ccNum, ccVal|
+                            port.control(ch, ccNum.asInteger, ccVal.asInteger.clip(0, 127));
+                        });
+                    };
+                };
+
+                // Also send any CC p-locks from the step
+                if(stepData[\pLocks].notNil) {
+                    stepData[\pLocks].keysValuesDo({ |k, v|
+                        var key = k.asString;
+                        if(key.beginsWith("cc")) {
+                            var ccNum = key[2..].asInteger;
+                            port.control(ch, ccNum.clip(0, 127), v.asInteger.clip(0, 127));
+                        };
+                    });
+                };
             };
         };
 
@@ -388,6 +433,39 @@
         if(track.notNil) {
             track[\solo] = track[\solo].not;
         };
+    },
+
+    // ==========================================
+    // MIDI TRACK CONFIGURATION
+    // ==========================================
+    setTrackMidiChannel: { |self, trackIdx, channel|
+        var track = ~CHRONOS[\tracks][trackIdx];
+        if(track.notNil and: { track[\type] == \midi }) {
+            track[\midiChannel] = channel.clip(0, 15);
+            "CHRONOS: Track % MIDI channel = %".format(trackIdx, channel).postln;
+        };
+    },
+
+    setTrackMidiPort: { |self, trackIdx, portIndex|
+        var track = ~CHRONOS[\tracks][trackIdx];
+        if(track.notNil and: { track[\type] == \midi }) {
+            var out = MIDIOut(portIndex.clip(0, 15));
+            track[\midiPort] = out;
+            "CHRONOS: Track % MIDI port = %".format(trackIdx, portIndex).postln;
+        };
+    },
+
+    setStepMidiCC: { |self, trackIdx, step, ccNum, ccVal|
+        var track = ~CHRONOS[\tracks][trackIdx];
+        if(track.notNil and: { track[\type] == \midi }) {
+            if(track[\midiCCMap].isNil) {
+                track[\midiCCMap] = Dictionary.new;
+            };
+            if(track[\midiCCMap][step].isNil) {
+                track[\midiCCMap][step] = Dictionary.new;
+            };
+            track[\midiCCMap][step][ccNum.clip(0, 127)] = ccVal.clip(0, 127);
+        };
     }
 );
 
@@ -456,6 +534,21 @@ OSCdef(\chronos_step_plock, { |msg|
 
 OSCdef(\chronos_copy, { |msg| ~CHRONOS_TRACKS.copyPattern(msg[1].asInteger) }, "/chronos/copy");
 OSCdef(\chronos_paste, { |msg| ~CHRONOS_TRACKS.pastePattern(msg[1].asInteger) }, "/chronos/paste");
+
+// MIDI track configuration
+OSCdef(\chronos_midi_channel, { |msg|
+    ~CHRONOS_TRACKS.setTrackMidiChannel(msg[1].asInteger, msg[2].asInteger);
+}, "/chronos/track/midi/channel");
+
+OSCdef(\chronos_midi_port, { |msg|
+    ~CHRONOS_TRACKS.setTrackMidiPort(msg[1].asInteger, msg[2].asInteger);
+}, "/chronos/track/midi/port");
+
+OSCdef(\chronos_midi_cc, { |msg|
+    ~CHRONOS_TRACKS.setStepMidiCC(
+        msg[1].asInteger, msg[2].asInteger,
+        msg[3].asInteger, msg[4].asInteger);
+}, "/chronos/step/midi/cc");
 
 // Golem legacy step aliases
 OSCdef(\golem_step_toggle_alias, { |msg|

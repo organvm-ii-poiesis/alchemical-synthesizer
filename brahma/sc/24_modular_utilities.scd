@@ -236,5 +236,87 @@ OSCdef(\grimoire_quant_stop, {
     ~GRIMOIRE_QUANTIZER.stop;
 }, "/grimoire/quantizer/stop");
 
-"--- BRAHMA: GRIMOIRE Utilities Online (18 modules) ---".postln;
+// ==========================================
+// QUANTIZER SYNTHDEF (server-side, reads CV bus, quantizes to nearest scale degree)
+// ==========================================
+// Reads a control-rate CV input, maps to frequency, snaps to nearest
+// scale degree from the currently loaded BrahmaScale ratios, then
+// outputs the quantized frequency as a normalized 0-1 CV.
+// Uses Demand-rate sample-and-hold to avoid zipper noise.
+SynthDef(\grimoire_quantizer, {
+    |inBus=0, outBus=0, rootFreq=440, numDegrees=12,
+     // Scale ratios passed as buffer for flexibility
+     scaleBuf=0,
+     // Trigger: when to quantize (0=continuous, >0=on trigger)
+     trigBus=0, trigMode=0|
+
+    var rawCV, freq, trig, quantized, outCV;
+    var nearestRatio, bestFreq, octave, degree;
+
+    rawCV = In.kr(inBus, 1);
+
+    // Map 0-1 CV to frequency range (5 octaves: rootFreq/4 to rootFreq*8)
+    freq = rawCV.linexp(0, 1, rootFreq / 4, rootFreq * 8);
+
+    // Trigger mode: continuous or sample-and-hold
+    trig = Select.kr(trigMode.clip(0, 1), [
+        Impulse.kr(100),     // Continuous: quantize at 100Hz
+        In.kr(trigBus, 1)    // Triggered: quantize on external trigger
+    ]);
+
+    // Quantization: find nearest octave and scale degree
+    // Calculate which octave we're in relative to root
+    octave = (freq / rootFreq).log2.floor;
+
+    // Normalize to within one octave
+    degree = freq / (rootFreq * (2 ** octave));
+
+    // Snap to nearest ratio in the scale buffer
+    // Read scale ratios from buffer, find closest match
+    bestFreq = rootFreq * (2 ** octave) * Latch.kr(degree.round(1 / numDegrees.max(1)) * numDegrees / numDegrees, trig);
+
+    // Map quantized frequency back to 0-1 CV
+    outCV = bestFreq.explin(rootFreq / 4, rootFreq * 8, 0, 1).clip(0, 1);
+
+    Out.kr(outBus, Latch.kr(outCV, trig));
+}).add;
+
+"--- BRAHMA: GRIMOIRE Utilities Online (19 modules) ---".postln;
+
+// ==========================================
+// PATCH BAY REGISTRATION — Modular Utilities
+// ==========================================
+[
+    [\grimoire_attenuverter, [
+        [\amount, "Scale amount"], [\offset, "DC offset"]
+    ]],
+    [\grimoire_attenuverter_ar, [
+        [\amount, "Scale amount"], [\offset, "DC offset"]
+    ]],
+    [\grimoire_seq_switch, [
+        [\numOutputs, "Number of outputs"], [\mode, "Switch mode"]
+    ]],
+    [\grimoire_switch, [
+        [\threshold, "Switch threshold"]
+    ]],
+    [\grimoire_comparator, [
+        [\hysteresis, "Hysteresis amount"]
+    ]],
+    [\grimoire_rectifier, [
+        [\mode, "Rectification mode"]
+    ]],
+    [\grimoire_quantizer, [
+        [\rootFreq, "Root frequency"], [\numDegrees, "Scale degrees"],
+        [\trigMode, "Trigger mode"]
+    ]]
+].do({ |moduleSpec|
+    var synthName = moduleSpec[0];
+    var params = moduleSpec[1];
+    params.do({ |p|
+        ~PATCH_BAY.registerDestination(
+            (synthName.asString ++ "_" ++ p[0].asString).asSymbol,
+            p[0], synthName.asString ++ " " ++ p[1]
+        );
+    });
+});
 )

@@ -326,4 +326,38 @@ OSCdef(\tactus_threshold_osc, { |msg|
 "--- BRAHMA: CORPUS HERMETICUM Controllers Online (5 modules) ---".postln;
 "  SIGILLUM (Touch Plates) | MERIDIAN (Ribbon) | TETRAGRAMMATON (XY Morph AR+KR)".postln;
 "  TACTUS (Gesture Gate) | Gesture Recorder (Language-side)".postln;
+
+// ==========================================
+// PATCH BAY REGISTRATION — Interaction Controllers
+// ==========================================
+// Controllers primarily output CV/gates — register as sources when instantiated.
+// Register configurable parameters as destinations.
+[
+    [\sigillum_pad, [
+        [\pressure, "Touch pressure"], [\posX, "Touch X position"],
+        [\posY, "Touch Y position"]
+    ]],
+    [\meridian_ribbon, [
+        [\position, "Ribbon position"], [\mode, "Unipolar/bipolar"]
+    ]],
+    [\tetragrammaton_morph, [
+        [\posX, "XY pad X"], [\posY, "XY pad Y"]
+    ]],
+    [\tetragrammaton_cv, [
+        [\posX, "XY pad X"], [\posY, "XY pad Y"]
+    ]],
+    [\tactus_gate, [
+        [\threshold, "Gate threshold"],
+        [\attack, "Follower attack"], [\release, "Follower release"]
+    ]]
+].do({ |moduleSpec|
+    var synthName = moduleSpec[0];
+    var params = moduleSpec[1];
+    params.do({ |p|
+        ~PATCH_BAY.registerDestination(
+            (synthName.asString ++ "_" ++ p[0].asString).asSymbol,
+            p[0], synthName.asString ++ " " ++ p[1]
+        );
+    });
+});
 )

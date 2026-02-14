@@ -239,4 +239,43 @@ SynthDef(\harmonic_vessel, {
 "--- BRAHMA: Make Noise Oscillator Clones Online ---".postln;
 "  PRISMATIC_TWIN (DPO) | PRISMATIC_MONO (STO) | PRISMATIC_STEREO (XPO)".postln;
 "  PRISMATIC_MULTI (MultiWAVE) | SPECTRAL_ORACLE (Spectraphon) | HARMONIC_VESSEL (tELHARMONIC)".postln;
+
+// ==========================================
+// PATCH BAY REGISTRATION — Make Noise Oscillators
+// ==========================================
+[
+    [\prismatic_twin, [
+        [\freq1, "Osc1 frequency"], [\freq2, "Osc2 frequency"],
+        [\fmIndex, "FM index"], [\shape1, "Osc1 waveshape"],
+        [\shape2, "Osc2 waveshape"], [\follow, "Frequency follow"]
+    ]],
+    [\prismatic_mono, [
+        [\freq, "Frequency"], [\shape, "Waveshape"],
+        [\fmAmt, "FM amount"]
+    ]],
+    [\prismatic_stereo, [
+        [\freq, "Frequency"], [\shape, "Waveshape"],
+        [\spread, "Stereo spread"], [\detune, "Detune"]
+    ]],
+    [\prismatic_multi, [
+        [\freq, "Base frequency"], [\spread, "Frequency spread"]
+    ]],
+    [\spectral_oracle, [
+        [\freq, "Frequency"], [\partials, "Partial count"],
+        [\tilt, "Spectral tilt"], [\warp, "Spectral warp"]
+    ]],
+    [\harmonic_vessel, [
+        [\freq, "Frequency"], [\algorithm, "Synthesis algorithm"],
+        [\harmony, "Harmonic content"], [\warp, "Spectral warping"]
+    ]]
+].do({ |moduleSpec|
+    var synthName = moduleSpec[0];
+    var params = moduleSpec[1];
+    params.do({ |p|
+        ~PATCH_BAY.registerDestination(
+            (synthName.asString ++ "_" ++ p[0].asString).asSymbol,
+            p[0], synthName.asString ++ " " ++ p[1]
+        );
+    });
+});
 )

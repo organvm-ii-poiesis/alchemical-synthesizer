@@ -120,4 +120,41 @@ SynthDef(\solve_spectral_filter, {
 }).add;
 
 "--- BRAHMA: SOLVE_ET_COAGULA Spectral FX Online (6 processors) ---".postln;
+
+// ==========================================
+// PATCH BAY REGISTRATION — Spectral FX
+// ==========================================
+[
+    [\solve_vocoder, [
+        [\shift, "Formant shift"], [\mix, "Dry/wet mix"]
+    ]],
+    [\solve_spectral_freeze, [
+        [\freeze, "Freeze toggle"], [\mix, "Dry/wet mix"]
+    ]],
+    [\solve_spectral_blur, [
+        [\blurAmount, "Blur amount"], [\mix, "Dry/wet mix"]
+    ]],
+    [\solve_pitch_shift, [
+        [\semitones, "Pitch shift semitones"],
+        [\windowSize, "Window size"], [\mix, "Dry/wet mix"]
+    ]],
+    [\solve_harmonizer, [
+        [\interval1, "Voice 1 interval"], [\interval2, "Voice 2 interval"],
+        [\voice1Level, "Voice 1 level"], [\voice2Level, "Voice 2 level"],
+        [\mix, "Dry/wet mix"]
+    ]],
+    [\solve_spectral_filter, [
+        [\lowBin, "Low bin cutoff"], [\highBin, "High bin cutoff"],
+        [\mix, "Dry/wet mix"]
+    ]]
+].do({ |moduleSpec|
+    var synthName = moduleSpec[0];
+    var params = moduleSpec[1];
+    params.do({ |p|
+        ~PATCH_BAY.registerDestination(
+            (synthName.asString ++ "_" ++ p[0].asString).asSymbol,
+            p[0], synthName.asString ++ " " ++ p[1]
+        );
+    });
+});
 )

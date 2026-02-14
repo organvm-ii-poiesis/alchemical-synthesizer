@@ -439,4 +439,36 @@ OSCdef(\octahedron_arr_advance, {
 );
 
 "--- BRAHMA: OCTAHEDRON Octatrack Features Online (6 modules) ---".postln;
+
+// ==========================================
+// PATCH BAY REGISTRATION — Octatrack Modules
+// ==========================================
+[
+    [\octahedron_crossfader, [
+        [\xfade, "Crossfade position"], [\curve, "Crossfade curve"]
+    ]],
+    [\octahedron_pickup, [
+        [\record, "Record toggle"], [\overdub, "Overdub toggle"],
+        [\feedback, "Overdub feedback"], [\level, "Playback level"]
+    ]],
+    [\octahedron_timestretch, [
+        [\rate, "Time stretch rate"], [\pitch, "Pitch shift"],
+        [\grainSize, "Grain size"], [\overlap, "Grain overlap"]
+    ]],
+    [\octahedron_slicer, [
+        [\sliceIndex, "Slice index"], [\rate, "Playback rate"]
+    ]],
+    [\octahedron_cue, [
+        [\cueLevel, "Cue level"], [\mainLevel, "Main level"]
+    ]]
+].do({ |moduleSpec|
+    var synthName = moduleSpec[0];
+    var params = moduleSpec[1];
+    params.do({ |p|
+        ~PATCH_BAY.registerDestination(
+            (synthName.asString ++ "_" ++ p[0].asString).asSymbol,
+            p[0], synthName.asString ++ " " ++ p[1]
+        );
+    });
+});
 )

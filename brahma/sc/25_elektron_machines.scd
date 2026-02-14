@@ -481,4 +481,45 @@ OSCdef(\chimera_layer_trig, { |msg|
 "--- BRAHMA: MAGNUM OPUS Synthesis Machines Online (6 machines) ---".postln;
 "  AUTOMATON: TRX (909) | EFM (FM Metal) | E12 (12-bit) | GND (Noise)".postln;
 "  AZOTH_MINOR: Arpeggiator | CHIMERA: Sample Layer + Performance Macros".postln;
+
+// ==========================================
+// PATCH BAY REGISTRATION — Elektron Machines
+// ==========================================
+[
+    [\automaton_trx, [
+        [\type, "Drum type"], [\freq, "Frequency"],
+        [\decay, "Decay time"], [\tone, "Tone"],
+        [\snap, "Snap/transient"]
+    ]],
+    [\automaton_efm, [
+        [\freq, "Frequency"], [\ratio, "FM ratio"],
+        [\index, "FM index"], [\decay, "Decay"],
+        [\feedback, "Feedback"]
+    ]],
+    [\automaton_e12, [
+        [\rate, "Playback rate"], [\lofi, "Lo-fi amount"],
+        [\decay, "Decay"]
+    ]],
+    [\automaton_gnd, [
+        [\freq, "Center frequency"], [\bw, "Bandwidth"],
+        [\decay, "Decay"], [\type, "Noise type"]
+    ]],
+    [\azoth_minor_arp, [
+        [\rate, "Arp rate"], [\mode, "Arp direction"],
+        [\octaves, "Octave range"]
+    ]],
+    [\chimera_sample_layer, [
+        [\synthLevel, "Synth level"], [\sampleLevel, "Sample level"],
+        [\filterFreq, "Filter cutoff"], [\filterRes, "Filter resonance"]
+    ]]
+].do({ |moduleSpec|
+    var synthName = moduleSpec[0];
+    var params = moduleSpec[1];
+    params.do({ |p|
+        ~PATCH_BAY.registerDestination(
+            (synthName.asString ++ "_" ++ p[0].asString).asSymbol,
+            p[0], synthName.asString ++ " " ++ p[1]
+        );
+    });
+});
 )

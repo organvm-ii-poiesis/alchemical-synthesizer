@@ -296,4 +296,30 @@ OSCdef(\pneuma_config, { |msg|
 "--- BRAHMA: CORPUS HERMETICUM Sensors Online (5 modules) ---".postln;
 "  PNEUMA: Amplitude | Pitch | Spectrum | Onset".postln;
 "  SENSORIUM: Universal Sensor Bridge (Language-side)".postln;
+
+// ==========================================
+// PATCH BAY REGISTRATION — Sensors
+// ==========================================
+// Sensors output analysis CV — register configurable params as destinations.
+[
+    [\pneuma_amplitude, [
+        [\attack, "Follower attack"], [\release, "Follower release"],
+        [\sensitivity, "Output sensitivity"]
+    ]],
+    [\pneuma_pitch, [
+        [\minFreq, "Min detection freq"], [\maxFreq, "Max detection freq"]
+    ]],
+    [\pneuma_onset, [
+        [\threshold, "Onset threshold"], [\type, "Detection algorithm"]
+    ]]
+].do({ |moduleSpec|
+    var synthName = moduleSpec[0];
+    var params = moduleSpec[1];
+    params.do({ |p|
+        ~PATCH_BAY.registerDestination(
+            (synthName.asString ++ "_" ++ p[0].asString).asSymbol,
+            p[0], synthName.asString ++ " " ++ p[1]
+        );
+    });
+});
 )

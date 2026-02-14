@@ -155,4 +155,37 @@ SynthDef(\anima_ring_mod, {
 
 "--- BRAHMA: ANIMA Modular Amplifiers Online (5 modules) ---".postln;
 "  ANIMA_VCA | ANIMA_LPG | ANIMA_MIXER | ANIMA_CROSSFADER | ANIMA_RING_MOD".postln;
+
+// ==========================================
+// PATCH BAY REGISTRATION — Modular Amplifiers
+// ==========================================
+[
+    [\anima_vca, [
+        [\gain, "VCA gain"], [\mode, "Response curve"]
+    ]],
+    [\anima_lpg, [
+        [\strike, "Strike input"], [\damp, "Damping"]
+    ]],
+    [\anima_mixer, [
+        [\level1, "Ch1 level"], [\level2, "Ch2 level"],
+        [\level3, "Ch3 level"], [\level4, "Ch4 level"],
+        [\pan1, "Ch1 pan"], [\pan2, "Ch2 pan"],
+        [\pan3, "Ch3 pan"], [\pan4, "Ch4 pan"]
+    ]],
+    [\anima_crossfader, [
+        [\crossfade, "Crossfade position"]
+    ]],
+    [\anima_ring_mod, [
+        [\mix, "Dry/wet mix"]
+    ]]
+].do({ |moduleSpec|
+    var synthName = moduleSpec[0];
+    var params = moduleSpec[1];
+    params.do({ |p|
+        ~PATCH_BAY.registerDestination(
+            (synthName.asString ++ "_" ++ p[0].asString).asSymbol,
+            p[0], synthName.asString ++ " " ++ p[1]
+        );
+    });
+});
 )

@@ -276,4 +276,37 @@ SynthDef(\nigredo_looping, {
 "--- BRAHMA: NIGREDO Modular Envelopes Online (6 modules) ---".postln;
 "  NIGREDO_ADSR | NIGREDO_AD | NIGREDO_AR".postln;
 "  NIGREDO_MULTI | NIGREDO_FUNCTION | NIGREDO_LOOPING".postln;
+
+// ==========================================
+// PATCH BAY REGISTRATION — Modular Envelopes
+// ==========================================
+[
+    [\nigredo_adsr, [
+        [\atk, "Attack time"], [\dec, "Decay time"],
+        [\sus, "Sustain level"], [\rel, "Release time"],
+        [\curve, "Curve shape"]
+    ]],
+    [\nigredo_ad, [
+        [\atk, "Attack time"], [\dec, "Decay time"], [\curve, "Curve shape"]
+    ]],
+    [\nigredo_ar, [
+        [\atk, "Attack time"], [\rel, "Release time"], [\curve, "Curve shape"]
+    ]],
+    [\nigredo_function, [
+        [\rise, "Rise time"], [\fall, "Fall time"],
+        [\shape, "Curve shape"], [\cycle, "Cycle mode"]
+    ]],
+    [\nigredo_looping, [
+        [\atk, "Attack time"], [\rel, "Release time"], [\loop, "Loop enable"]
+    ]]
+].do({ |moduleSpec|
+    var synthName = moduleSpec[0];
+    var params = moduleSpec[1];
+    params.do({ |p|
+        ~PATCH_BAY.registerDestination(
+            (synthName.asString ++ "_" ++ p[0].asString).asSymbol,
+            p[0], synthName.asString ++ " " ++ p[1]
+        );
+    });
+});
 )

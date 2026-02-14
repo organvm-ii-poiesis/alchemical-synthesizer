@@ -120,4 +120,33 @@ SynthDef(\aether_binaural, {
 }).add;
 
 "--- BRAHMA: AETHER Spatial FX Online (6 processors) ---".postln;
+
+// ==========================================
+// PATCH BAY REGISTRATION — Spatial FX
+// ==========================================
+[
+    [\aether_width, [
+        [\width, "Stereo width"]
+    ]],
+    [\aether_auto_pan, [
+        [\rate, "Pan rate"], [\depth, "Pan depth"],
+        [\shape, "LFO shape"], [\mix, "Dry/wet mix"]
+    ]],
+    [\aether_haas, [
+        [\delayMs, "Haas delay ms"]
+    ]],
+    [\aether_binaural, [
+        [\azimuth, "Azimuth position"], [\elevation, "Elevation"],
+        [\distance, "Distance"]
+    ]]
+].do({ |moduleSpec|
+    var synthName = moduleSpec[0];
+    var params = moduleSpec[1];
+    params.do({ |p|
+        ~PATCH_BAY.registerDestination(
+            (synthName.asString ++ "_" ++ p[0].asString).asSymbol,
+            p[0], synthName.asString ++ " " ++ p[1]
+        );
+    });
+});
 )

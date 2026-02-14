@@ -477,4 +477,54 @@ SynthDef(\vactrol_dxg, {
 "  TETRAPEAK (QPAS) | VACTROL SANCTUM (Optomix) | VACTROL SHADOW (LxD)".postln;
 "  VACTROL MATRIX (QXG) | VACTROL QUAD (QMMG) | RESONANCE PRISM (Multimod)".postln;
 "  VACTROL CLASSIC (MMG) | FORMANT DRIFT (FxDf) | VACTROL DXG (DXG)".postln;
+
+// ==========================================
+// PATCH BAY REGISTRATION — Make Noise Filters
+// ==========================================
+[
+    [\tetrapeak, [
+        [\freq, "Center frequency"], [\res, "Resonance"],
+        [\radiate, "Stereo radiate"], [\mode, "Filter mode"]
+    ]],
+    [\vactrol_sanctum, [
+        [\ch1_strike, "Ch1 strike"], [\ch2_strike, "Ch2 strike"],
+        [\ch1_damp, "Ch1 damp"], [\ch2_damp, "Ch2 damp"]
+    ]],
+    [\vactrol_shadow, [
+        [\ch1_freq, "Ch1 frequency"], [\ch2_freq, "Ch2 frequency"],
+        [\ch1_level, "Ch1 level"], [\ch2_level, "Ch2 level"]
+    ]],
+    [\vactrol_matrix, [
+        [\threshold, "Gate threshold"], [\attack, "Attack time"],
+        [\release, "Release time"]
+    ]],
+    [\vactrol_quad, [
+        [\freq, "Cutoff frequency"], [\mode, "Filter mode"],
+        [\strike, "Strike input"], [\damp, "Damping"]
+    ]],
+    [\resonance_prism, [
+        [\freq, "Cutoff frequency"], [\res, "Resonance"], [\mode, "Filter mode"]
+    ]],
+    [\vactrol_classic, [
+        [\freq, "Cutoff frequency"], [\res, "Resonance"],
+        [\mode, "Filter mode"], [\strike, "Strike input"]
+    ]],
+    [\formant_drift, [
+        [\morph, "Formant morph"], [\shift, "Frequency shift"],
+        [\spread, "Bandwidth spread"]
+    ]],
+    [\vactrol_dxg, [
+        [\crossfade, "A/B crossfade"], [\strike, "Strike input"],
+        [\damp, "Damping"]
+    ]]
+].do({ |moduleSpec|
+    var synthName = moduleSpec[0];
+    var params = moduleSpec[1];
+    params.do({ |p|
+        ~PATCH_BAY.registerDestination(
+            (synthName.asString ++ "_" ++ p[0].asString).asSymbol,
+            p[0], synthName.asString ++ " " ++ p[1]
+        );
+    });
+});
 )

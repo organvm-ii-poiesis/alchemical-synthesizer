@@ -459,4 +459,28 @@ OSCdef(\probmatrix_reset, { |msg|
 }, "/daemon/probmatrix/reset");
 
 "--- BRAHMA: DAEMON Generative Sequencers Online (4 modules) ---".postln;
+
+// --- PATCH BAY REGISTRATION: Generative Sequencers ---
+if(~PATCH_BAY.notNil) {
+    [
+        [\sibyl_bernoulli, [
+            [\prob, "Bernoulli probability"],
+            [\lag, "output smoothing"]
+        ]],
+        [\sibyl_comparator_seq, [
+            [\threshold, "comparator threshold"],
+            [\hysteresis, "comparator hysteresis"]
+        ]]
+    ].do({ |moduleSpec|
+        var synthName = moduleSpec[0];
+        var params = moduleSpec[1];
+        params.do({ |p|
+            ~PATCH_BAY.registerDestination(
+                (synthName.asString ++ "_" ++ p[0].asString).asSymbol,
+                p[0], synthName.asString ++ " " ++ p[1]
+            );
+        });
+    });
+    "  -> Generative sequencer modules registered with Patch Bay".postln;
+};
 )

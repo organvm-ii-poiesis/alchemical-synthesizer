@@ -629,6 +629,118 @@ SynthDef(\tetramorph, {
 }).add;
 
 // ==========================================
+// 10. NEBULA — Granular Cloud Synthesis
+// ==========================================
+SynthDef(\nebula, {
+    |outBus=0, inBus=0, freq=440, gate=1, velocity=0.8,
+     pressure=0, slide=0,
+     // Buffer source (0 = use internal oscillator as grain source)
+     bufnum=0, useBuffer=0,
+     // Grain parameters
+     grainDensity=20,       // Grains per second (1-200)
+     grainSize=0.05,        // Duration of each grain (0.001-0.5s)
+     position=0.0,          // Scan position in buffer (0-1)
+     positionSpread=0.02,   // Random offset around position (spray)
+     // Pitch
+     pitchSpread=0.0,       // Random pitch deviation per grain (semitones)
+     // Grain envelope shape: 0=Hanning, 1=triangle, 2=rectangular
+     grainEnvType=0,
+     // Stereo spread
+     stereoSpread=0.5,      // 0=mono center, 1=full stereo scatter
+     // Freeze: hold grains at current position
+     freeze=0,
+     // Texture controls
+     overlap=2.0,           // Grain overlap factor
+     jitter=0.0,            // Timing jitter on grain triggers (0-1)
+     // Filter
+     cutoff=12000, resonance=0.5,
+     // Envelope
+     atk=0.1, dec=0.3, sus=0.8, rel=0.5|
+
+    var trig, grainTrig, grainPos, grainPitch, grainDur;
+    var grainSig, oscSource, ampEnv, sig;
+    var pitchRand, panRand, posJitter;
+    var grainEnv;
+
+    ampEnv = EnvGen.ar(Env.adsr(atk, dec, sus, rel), gate, doneAction: 2);
+
+    // Grain trigger: density with optional jitter
+    grainTrig = Impulse.ar(grainDensity.clip(1, 200))
+        + (Dust.ar(grainDensity * jitter.clip(0, 1)) * jitter.sign);
+
+    // Grain duration
+    grainDur = grainSize.clip(0.001, 0.5) * overlap.clip(0.5, 8);
+
+    // Per-grain random pitch deviation
+    pitchRand = TRand.ar(
+        pitchSpread.clip(0, 24).neg,
+        pitchSpread.clip(0, 24),
+        grainTrig
+    );
+    grainPitch = (2 ** (pitchRand / 12));
+
+    // Per-grain pan position
+    panRand = TRand.ar(
+        stereoSpread.clip(0, 1).neg,
+        stereoSpread.clip(0, 1),
+        grainTrig
+    );
+
+    // Position with spray/spread
+    posJitter = TRand.ar(
+        positionSpread.clip(0, 0.5).neg,
+        positionSpread.clip(0, 0.5),
+        grainTrig
+    );
+    grainPos = Select.ar(freeze.clip(0, 1), [
+        (position + posJitter).wrap(0, 1),
+        position  // Frozen: no position movement
+    ]);
+
+    // Grain envelope selection
+    grainEnv = Select.kr(grainEnvType.clip(0, 2), [
+        -1,  // Hanning (built-in)
+        -1,  // Triangle (use built-in, closest)
+        -1   // Rectangular (use built-in)
+    ]);
+
+    // Select grain source: buffer or synthesis
+    grainSig = Select.ar(useBuffer.clip(0, 1), [
+        // Synthesis-based grains (GrainSin)
+        GrainSin.ar(
+            numChannels: 2,
+            trigger: grainTrig,
+            dur: grainDur,
+            freq: freq * grainPitch,
+            pan: panRand
+        ),
+        // Buffer-based grains (GrainBuf)
+        GrainBuf.ar(
+            numChannels: 2,
+            trigger: grainTrig,
+            dur: grainDur,
+            sndbuf: bufnum,
+            rate: (freq / 440) * grainPitch * BufRateScale.ir(bufnum),
+            pos: grainPos,
+            interp: 4,
+            pan: panRand
+        )
+    ]);
+
+    // Filter
+    sig = RLPF.ar(grainSig, cutoff.clip(20, 20000),
+        (1 / resonance.clip(0.5, 20)).clip(0.01, 1));
+
+    sig = sig * ampEnv * velocity;
+    sig = sig + (sig * pressure * 0.2);
+
+    // Slide controls stereo image shift
+    sig = Balance2.ar(sig[0], sig[1], slide.linlin(0, 1, -0.5, 0.5));
+
+    Out.ar(outBus, sig);
+}).add;
+
+// ==========================================
 // ENTITY REGISTRATION & CHRONOS TARGETS
 // ==========================================
 
@@ -642,7 +754,8 @@ SynthDef(\tetramorph, {
     [\homunculus, "Physical Modeling", 3006],
     [\buchlaeus, "West Coast", 3007],
     [\logos, "Formant", 3008],
-    [\tetramorph, "Vector", 3009]
+    [\tetramorph, "Vector", 3009],
+    [\nebula, "Granular", 3010]
 ].do({ |spec|
     var synthDef = spec[0];
     var type = spec[1];
@@ -660,8 +773,81 @@ SynthDef(\tetramorph, {
     ~CHRONOS.registerTarget(synthDef.asString, synthDef, 0, ~SC_GRP[\te]);
 });
 
-"--- BRAHMA: 9 Synthesis Engines Online ---".postln;
+"--- BRAHMA: 10 Synthesis Engines Online ---".postln;
 "  PRIMA MATERIA (Subtractive) | AZOTH (FM) | QUINTESSENCE (Additive)".postln;
 "  OUROBOROS (Wavetable) | CHRYSOPOEIA (PD) | HOMUNCULUS (Physical)".postln;
 "  BUCHLAEUS (West Coast) | LOGOS (Formant) | TETRAMORPH (Vector)".postln;
+"  NEBULA (Granular)".postln;
+
+// ==========================================
+// PATCH BAY REGISTRATION — Synthesis Engines
+// ==========================================
+// Register key parameters as patchable destinations
+[
+    [\prima_materia, [
+        [\cutoff, "Filter cutoff"], [\resonance, "Filter resonance"],
+        [\osc1Detune, "Osc1 detune"], [\osc2Detune, "Osc2 detune"],
+        [\pwm, "Pulse width"], [\filterEnvAmt, "Filter env amount"],
+        [\portamento, "Portamento time"]
+    ]],
+    [\azoth, [
+        [\algorithm, "FM algorithm"], [\op1Ratio, "Op1 ratio"], [\op2Ratio, "Op2 ratio"],
+        [\op3Ratio, "Op3 ratio"], [\op4Ratio, "Op4 ratio"],
+        [\op1Feedback, "Op1 feedback"], [\op1Level, "Op1 level"]
+    ]],
+    [\quintessence, [
+        [\stretch, "Harmonic stretch"], [\spread, "Frequency spread"],
+        [\shift, "Harmonic shift"], [\morphTarget, "Morph target"],
+        [\morphAmount, "Morph amount"]
+    ]],
+    [\ouroboros, [
+        [\position, "Wavetable position"], [\morph, "Table morph"],
+        [\posModFreq, "Position LFO rate"], [\posModAmt, "Position LFO amount"],
+        [\fmIndex, "FM index"], [\cutoff, "Filter cutoff"]
+    ]],
+    [\chrysopoeia, [
+        [\pdType, "PD waveform type"], [\dcw, "DCW amount"],
+        [\osc2Ratio, "Osc2 ratio"], [\osc2Ring, "Ring mod amount"],
+        [\dcwEnvAmt, "DCW env amount"]
+    ]],
+    [\homunculus, [
+        [\modelType, "Model type"], [\exciterType, "Exciter type"],
+        [\exciterBright, "Exciter brightness"], [\feedback, "Resonance decay"],
+        [\damping, "HF damping"], [\bowPressure, "Bow pressure"],
+        [\tension, "Membrane tension"]
+    ]],
+    [\buchlaeus, [
+        [\fmIndex, "FM index"], [\timbre, "Timbre (AM)"],
+        [\foldAmount, "Fold amount"], [\foldSymmetry, "Fold symmetry"],
+        [\modRatio, "Mod oscillator ratio"]
+    ]],
+    [\logos, [
+        [\vowel, "Vowel morph"], [\f1Freq, "Formant 1 freq"],
+        [\f2Freq, "Formant 2 freq"], [\exciterType, "Exciter type"],
+        [\choirVoices, "Choir voices"]
+    ]],
+    [\tetramorph, [
+        [\vectorX, "Vector X position"], [\vectorY, "Vector Y position"],
+        [\cutoff, "Filter cutoff"], [\resonance, "Filter resonance"]
+    ]],
+    [\nebula, [
+        [\grainDensity, "Grain density"], [\grainSize, "Grain size"],
+        [\position, "Buffer position"], [\positionSpread, "Position spray"],
+        [\pitchSpread, "Pitch spread"], [\stereoSpread, "Stereo spread"],
+        [\freeze, "Freeze"], [\cutoff, "Filter cutoff"]
+    ]]
+].do({ |engineSpec|
+    var synthName = engineSpec[0];
+    var params = engineSpec[1];
+    params.do({ |paramSpec|
+        var paramName = paramSpec[0];
+        var desc = paramSpec[1];
+        ~PATCH_BAY.registerDestination(
+            (synthName.asString ++ "_" ++ paramName.asString).asSymbol,
+            paramName,
+            synthName.asString ++ " " ++ desc
+        );
+    });
+});
 )
+

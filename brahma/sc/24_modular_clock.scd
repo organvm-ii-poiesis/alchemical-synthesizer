@@ -200,4 +200,35 @@ OSCdef(\horologium_link_stop, {
 }, "/horologium/link/stop");
 
 "--- BRAHMA: HOROLOGIUM Clock Modules Online (7 modules) ---".postln;
+
+// ==========================================
+// PATCH BAY REGISTRATION — Clock Modules
+// ==========================================
+[
+    [\horologium_master, [
+        [\bpm, "BPM"], [\run, "Run toggle"]
+    ]],
+    [\horologium_multiplier, [
+        [\multiply, "Multiply factor"]
+    ]],
+    [\horologium_swing, [
+        [\amount, "Swing amount"]
+    ]],
+    [\horologium_burst, [
+        [\count, "Burst count"], [\rate, "Burst rate"],
+        [\acceleration, "Rate acceleration"]
+    ]],
+    [\horologium_delay, [
+        [\delayMs, "Delay ms"], [\delayPercent, "Delay percent"]
+    ]]
+].do({ |moduleSpec|
+    var synthName = moduleSpec[0];
+    var params = moduleSpec[1];
+    params.do({ |p|
+        ~PATCH_BAY.registerDestination(
+            (synthName.asString ++ "_" ++ p[0].asString).asSymbol,
+            p[0], synthName.asString ++ " " ++ p[1]
+        );
+    });
+});
 )

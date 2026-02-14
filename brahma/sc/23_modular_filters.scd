@@ -269,4 +269,38 @@ SynthDef(\alembic_diode, {
 "  ALEMBIC LADDER (Moog 4-pole) | ALEMBIC SVF (State Variable)".postln;
 "  ALEMBIC COMB | ALEMBIC ALLPASS | ALEMBIC FORMANT (Vowel)".postln;
 "  ALEMBIC DIODE (303-style)".postln;
+
+// ==========================================
+// PATCH BAY REGISTRATION — Modular Filters
+// ==========================================
+[
+    [\alembic_ladder, [
+        [\freq, "Cutoff frequency"], [\res, "Resonance"]
+    ]],
+    [\alembic_svf, [
+        [\freq, "Cutoff frequency"], [\res, "Resonance"]
+    ]],
+    [\alembic_comb, [
+        [\freq, "Comb frequency"], [\feedback, "Feedback"], [\type, "Polarity"]
+    ]],
+    [\alembic_allpass, [
+        [\freq, "Center frequency"], [\decay, "Decay time"]
+    ]],
+    [\alembic_formant, [
+        [\vowel, "Vowel morph"], [\brightness, "Brightness"]
+    ]],
+    [\alembic_diode, [
+        [\freq, "Cutoff frequency"], [\res, "Resonance"],
+        [\accent, "Accent amount"]
+    ]]
+].do({ |moduleSpec|
+    var synthName = moduleSpec[0];
+    var params = moduleSpec[1];
+    params.do({ |p|
+        ~PATCH_BAY.registerDestination(
+            (synthName.asString ++ "_" ++ p[0].asString).asSymbol,
+            p[0], synthName.asString ++ " " ++ p[1]
+        );
+    });
+});
 )

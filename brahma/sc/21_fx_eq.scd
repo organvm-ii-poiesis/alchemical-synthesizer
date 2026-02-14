@@ -145,4 +145,46 @@ SynthDef(\prism_dynamic, {
 }).add;
 
 "--- BRAHMA: PHILOSOPHERS_PRISM EQ FX Online (5 processors) ---".postln;
+
+// ==========================================
+// PATCH BAY REGISTRATION — EQ FX
+// ==========================================
+[
+    [\prism_parametric, [
+        [\b1Freq, "Band 1 frequency"], [\b1Gain, "Band 1 gain"],
+        [\b2Freq, "Band 2 frequency"], [\b2Gain, "Band 2 gain"],
+        [\b3Freq, "Band 3 frequency"], [\b3Gain, "Band 3 gain"],
+        [\b4Freq, "Band 4 frequency"], [\b4Gain, "Band 4 gain"],
+        [\mix, "Dry/wet mix"]
+    ]],
+    [\prism_graphic, [
+        [\g63, "63Hz gain"], [\g125, "125Hz gain"],
+        [\g250, "250Hz gain"], [\g500, "500Hz gain"],
+        [\g1k, "1kHz gain"], [\g2k, "2kHz gain"],
+        [\g4k, "4kHz gain"], [\g8k, "8kHz gain"],
+        [\mix, "Dry/wet mix"]
+    ]],
+    [\prism_shelf, [
+        [\lowFreq, "Low shelf freq"], [\lowGain, "Low shelf gain"],
+        [\highFreq, "High shelf freq"], [\highGain, "High shelf gain"],
+        [\mix, "Dry/wet mix"]
+    ]],
+    [\prism_tilt, [
+        [\tilt, "Tilt amount"], [\centerFreq, "Center frequency"],
+        [\mix, "Dry/wet mix"]
+    ]],
+    [\prism_dynamic, [
+        [\freq, "Target frequency"], [\threshold, "Threshold"],
+        [\ratio, "Compression ratio"], [\mix, "Dry/wet mix"]
+    ]]
+].do({ |moduleSpec|
+    var synthName = moduleSpec[0];
+    var params = moduleSpec[1];
+    params.do({ |p|
+        ~PATCH_BAY.registerDestination(
+            (synthName.asString ++ "_" ++ p[0].asString).asSymbol,
+            p[0], synthName.asString ++ " " ++ p[1]
+        );
+    });
+});
 )

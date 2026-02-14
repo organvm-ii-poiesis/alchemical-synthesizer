@@ -169,4 +169,50 @@ SynthDef(\maelstrom_rotary, {
 }).add;
 
 "--- BRAHMA: MAELSTROM Modulation FX Online (8 processors) ---".postln;
+
+// ==========================================
+// PATCH BAY REGISTRATION — Modulation FX
+// ==========================================
+[
+    [\maelstrom_chorus, [
+        [\rate, "LFO rate"], [\depth, "Modulation depth"],
+        [\voices, "Voice count"], [\mix, "Dry/wet mix"]
+    ]],
+    [\maelstrom_flanger, [
+        [\rate, "LFO rate"], [\depth, "Modulation depth"],
+        [\feedback, "Feedback"], [\mix, "Dry/wet mix"]
+    ]],
+    [\maelstrom_phaser, [
+        [\rate, "LFO rate"], [\depth, "Modulation depth"],
+        [\stages, "Allpass stages"], [\feedback, "Feedback"],
+        [\mix, "Dry/wet mix"]
+    ]],
+    [\maelstrom_vibrato, [
+        [\rate, "Vibrato rate"], [\depth, "Vibrato depth"],
+        [\mix, "Dry/wet mix"]
+    ]],
+    [\maelstrom_tremolo, [
+        [\rate, "Tremolo rate"], [\depth, "Tremolo depth"],
+        [\shape, "LFO shape"]
+    ]],
+    [\maelstrom_ring_mod, [
+        [\carrierFreq, "Carrier frequency"], [\mix, "Dry/wet mix"]
+    ]],
+    [\maelstrom_freq_shift, [
+        [\shift, "Frequency shift Hz"], [\feedback, "Feedback"],
+        [\mix, "Dry/wet mix"]
+    ]],
+    [\maelstrom_rotary, [
+        [\speed, "Rotor speed"], [\acceleration, "Speed ramp time"]
+    ]]
+].do({ |moduleSpec|
+    var synthName = moduleSpec[0];
+    var params = moduleSpec[1];
+    params.do({ |p|
+        ~PATCH_BAY.registerDestination(
+            (synthName.asString ++ "_" ++ p[0].asString).asSymbol,
+            p[0], synthName.asString ++ " " ++ p[1]
+        );
+    });
+});
 )

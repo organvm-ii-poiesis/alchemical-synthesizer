@@ -133,4 +133,41 @@ SynthDef(\calcination_clipper, {
 }).add;
 
 "--- BRAHMA: CALCINATION Distortion FX Online (6 processors) ---".postln;
+
+// ==========================================
+// PATCH BAY REGISTRATION — Distortion FX
+// ==========================================
+[
+    [\calcination_overdrive, [
+        [\gain, "Drive gain"], [\tone, "Tone"], [\mix, "Dry/wet mix"]
+    ]],
+    [\calcination_fuzz, [
+        [\gain, "Fuzz gain"], [\octaveUp, "Octave up"], [\mix, "Dry/wet mix"]
+    ]],
+    [\calcination_waveshaper, [
+        [\transferFunc, "Transfer function"], [\drive, "Drive amount"],
+        [\mix, "Dry/wet mix"]
+    ]],
+    [\calcination_tube, [
+        [\drive, "Tube drive"], [\bias, "Tube bias"],
+        [\sag, "Power sag"], [\mix, "Dry/wet mix"]
+    ]],
+    [\calcination_decimator, [
+        [\sampleRate, "Sample rate reduce"], [\bitDepth, "Bit depth"],
+        [\mix, "Dry/wet mix"]
+    ]],
+    [\calcination_clipper, [
+        [\threshold, "Clip threshold"], [\ceiling, "Ceiling"],
+        [\mix, "Dry/wet mix"]
+    ]]
+].do({ |moduleSpec|
+    var synthName = moduleSpec[0];
+    var params = moduleSpec[1];
+    params.do({ |p|
+        ~PATCH_BAY.registerDestination(
+            (synthName.asString ++ "_" ++ p[0].asString).asSymbol,
+            p[0], synthName.asString ++ " " ++ p[1]
+        );
+    });
+});
 )

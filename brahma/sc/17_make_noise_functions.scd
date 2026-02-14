@@ -605,4 +605,60 @@ SynthDef(\hermetic_contour, {
 "--- BRAHMA: Hermetic Function Generators Online ---".postln;
 "  HERMETIC DUAL (MATHS) | HERMETIC QUAD (PoliMATHS)".postln;
 "  HERMETIC MONO (Function) | HERMETIC CONTOUR (Contour)".postln;
+
+// ==========================================
+// PATCH BAY REGISTRATION — Hermetic Function Generators
+// ==========================================
+// Register trigger outputs as sources (already have buses allocated)
+[
+    [\hermetic_dual_ch1_eor, "Hermetic Dual Ch1 End-of-Rise"],
+    [\hermetic_dual_ch1_eoc, "Hermetic Dual Ch1 End-of-Cycle"],
+    [\hermetic_dual_ch4_eor, "Hermetic Dual Ch4 End-of-Rise"],
+    [\hermetic_dual_ch4_eoc, "Hermetic Dual Ch4 End-of-Cycle"],
+    [\hermetic_quad_chA_eor, "Hermetic Quad ChA End-of-Rise"],
+    [\hermetic_quad_chA_eoc, "Hermetic Quad ChA End-of-Cycle"],
+    [\hermetic_quad_chB_eor, "Hermetic Quad ChB End-of-Rise"],
+    [\hermetic_quad_chB_eoc, "Hermetic Quad ChB End-of-Cycle"],
+    [\hermetic_quad_chC_eor, "Hermetic Quad ChC End-of-Rise"],
+    [\hermetic_quad_chC_eoc, "Hermetic Quad ChC End-of-Cycle"],
+    [\hermetic_quad_chD_eor, "Hermetic Quad ChD End-of-Rise"],
+    [\hermetic_quad_chD_eoc, "Hermetic Quad ChD End-of-Cycle"],
+    [\hermetic_mono_eor, "Hermetic Mono End-of-Rise"],
+    [\hermetic_mono_eoc, "Hermetic Mono End-of-Cycle"],
+    [\hermetic_contour_eor, "Hermetic Contour End-of-Rise"],
+    [\hermetic_contour_eoc, "Hermetic Contour End-of-Cycle"]
+].do({ |spec|
+    var busName = spec[0];
+    var desc = spec[1];
+    ~PATCH_BAY.registerSource(busName, ~SC_BUS[busName], \control, desc);
+});
+
+// Register function generator parameters as destinations
+[
+    [\hermetic_dual, [
+        [\ch1_rise, "Ch1 rise time"], [\ch1_fall, "Ch1 fall time"],
+        [\ch1_curve, "Ch1 curve shape"], [\ch1_cycle, "Ch1 cycle mode"],
+        [\ch4_rise, "Ch4 rise time"], [\ch4_fall, "Ch4 fall time"],
+        [\ch4_curve, "Ch4 curve shape"], [\ch4_cycle, "Ch4 cycle mode"],
+        [\ch2_atten, "Ch2 attenuverter"], [\ch3_atten, "Ch3 attenuverter"]
+    ]],
+    [\hermetic_mono, [
+        [\rise, "Rise time"], [\fall, "Fall time"],
+        [\curve, "Curve shape"], [\cycle, "Cycle mode"], [\level, "Level"]
+    ]],
+    [\hermetic_contour, [
+        [\attack, "Attack time"], [\release, "Release time"],
+        [\shape, "Curve shape"], [\sustain_level, "Sustain level"]
+    ]]
+].do({ |moduleSpec|
+    var synthName = moduleSpec[0];
+    var params = moduleSpec[1];
+    params.do({ |paramSpec|
+        ~PATCH_BAY.registerDestination(
+            (synthName.asString ++ "_" ++ paramSpec[0].asString).asSymbol,
+            paramSpec[0],
+            synthName.asString ++ " " ++ paramSpec[1]
+        );
+    });
+});
 )

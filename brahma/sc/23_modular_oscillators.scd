@@ -254,4 +254,41 @@ SynthDef(\athanor_chaos, {
 "--- BRAHMA: ATHANOR Oscillator Suite Online (6 SynthDefs) ---".postln;
 "  ATHANOR VCO | ATHANOR SUPER | ATHANOR SUB".postln;
 "  ATHANOR NOISE | ATHANOR DUST | ATHANOR CHAOS".postln;
+
+// ==========================================
+// PATCH BAY REGISTRATION — Modular Oscillators
+// ==========================================
+[
+    [\athanor_vco, [
+        [\freq, "Frequency"], [\wave, "Waveform select"],
+        [\pwm, "Pulse width"], [\fmAmt, "FM amount"]
+    ]],
+    [\athanor_super, [
+        [\freq, "Frequency"], [\voices, "Voice count"],
+        [\spread, "Stereo spread"], [\detune, "Detune amount"]
+    ]],
+    [\athanor_sub, [
+        [\freq, "Frequency"], [\octave, "Octave division"],
+        [\wave, "Waveform"]
+    ]],
+    [\athanor_noise, [
+        [\type, "Noise type"]
+    ]],
+    [\athanor_dust, [
+        [\density, "Impulse density"]
+    ]],
+    [\athanor_chaos, [
+        [\type, "Attractor type"], [\freq, "Frequency"],
+        [\param1, "Chaos param 1"], [\param2, "Chaos param 2"]
+    ]]
+].do({ |moduleSpec|
+    var synthName = moduleSpec[0];
+    var params = moduleSpec[1];
+    params.do({ |p|
+        ~PATCH_BAY.registerDestination(
+            (synthName.asString ++ "_" ++ p[0].asString).asSymbol,
+            p[0], synthName.asString ++ " " ++ p[1]
+        );
+    });
+});
 )

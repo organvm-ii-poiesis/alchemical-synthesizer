@@ -382,8 +382,157 @@ SynthDef(\spatial_erbe, {
     Out.ar(outBus, sig);
 }).add;
 
-"--- BRAHMA: Make Noise Time-Domain Processors Loaded (5 modules) ---".postln;
+// ============================================================
+// 6. MORPHEUS_REEL — True Morphagene Clone
+//    Tape-splice granular processor with reel/splice/gene paradigm
+//    - Reel: continuous recording buffer (up to 174 seconds)
+//    - Splice: marker positions dividing reel into segments
+//    - Gene: variable-speed playback of current splice segment
+//    - SOS: Sound-on-Sound overdub layering
+//    - Varispeed with slide smoothing
+// ============================================================
+SynthDef(\morpheus_reel, {
+    |inBus=0, outBus=0, bufnum=0,
+     // Gene: playback speed (-4x to +4x, 0 = freeze)
+     gene=1.0,
+     // Slide: smoothness of gene speed transitions
+     slide=0.1,
+     // Organize: select splice point (0-1 maps across all splices)
+     organize=0.0,
+     // Morph: crossfade window between adjacent splice regions
+     morph=0.0,
+     // SOS: Sound-on-Sound amount (0=replace, 1=full overdub)
+     sos=0.0,
+     // Shift: pitch shift independent of speed (semitones)
+     shift=0,
+     // Gene size: length of playback window as proportion of splice (0.01-1.0)
+     geneSize=1.0,
+     // Record toggle
+     record=0,
+     // Mix
+     mix=0.5|
+
+    var in, dry, sig;
+    var buf_frames, play_rate, smoothed_rate;
+    var rec_phase, play_phase, play_start, play_end, play_len;
+    var splice_a, splice_b, morph_xfade;
+    var organize_pos, gene_window;
+    var sos_feedback, existing;
+    var shifted, window;
+
+    in = In.ar(inBus, 1);
+    dry = in;
+
+    buf_frames = BufFrames.ir(bufnum);
+
+    // Gene: playback speed with slide smoothing
+    play_rate = gene.clip(-4, 4);
+    smoothed_rate = Lag.kr(play_rate, slide.clip(0.001, 2.0));
+
+    // Record phase: continuous writing when record is engaged
+    rec_phase = Phasor.ar(0, BufRateScale.ir(bufnum), 0, buf_frames);
+
+    // SOS: mix new input with existing buffer content
+    existing = BufRd.ar(1, bufnum, rec_phase, loop: 1, interpolation: 2);
+    sos_feedback = (in + (existing * sos.clip(0, 0.95))) * record.clip(0, 1);
+    BufWr.ar(sos_feedback + (existing * (1 - record.clip(0, 1))), bufnum, rec_phase, loop: 1);
+
+    // Organize: position through the reel
+    // Maps 0-1 to buffer frame position
+    organize_pos = organize.clip(0, 1) * buf_frames;
+
+    // Gene size: how much of the splice region to scan
+    gene_window = geneSize.clip(0.01, 1.0) * buf_frames * 0.25; // Max 25% of buffer per gene
+
+    // Play start and end positions
+    play_start = organize_pos;
+    play_end = (organize_pos + gene_window).wrap(0, buf_frames);
+
+    // Variable-speed playback within the gene window
+    play_phase = Phasor.ar(
+        0,
+        BufRateScale.ir(bufnum) * smoothed_rate,
+        play_start,
+        play_end
+    );
+
+    // Primary splice read
+    splice_a = BufRd.ar(1, bufnum, play_phase, loop: 1, interpolation: 4);
+
+    // Morph: crossfade to an adjacent splice region
+    // Displaced by half the gene window for natural splice transitions
+    splice_b = BufRd.ar(1, bufnum,
+        (play_phase + (gene_window * 0.5)).wrap(0, buf_frames),
+        loop: 1, interpolation: 4
+    );
+
+    // Morph crossfade between splice regions
+    morph_xfade = XFade2.ar(splice_a, splice_b, morph.clip(0, 1) * 2 - 1);
+
+    // Shift: pitch-shift independent of speed
+    shifted = Select.ar((shift.abs > 0.1).asInteger, [
+        morph_xfade,
+        PitchShift.ar(morph_xfade, 0.2, 2 ** (shift.clip(-24, 24) / 12), 0.01, 0.01)
+    ]);
+
+    // Windowing to reduce splice clicks
+    window = Lag.ar(K2A.ar(1), 0.005);
+    sig = shifted * window;
+
+    // Mute playback while recording to avoid feedback
+    sig = sig * (1 - (record.clip(0, 1) * (1 - sos.clip(0, 1))));
+
+    // Dry/wet mix
+    sig = XFade2.ar(dry, sig, mix.clip(0, 1) * 2 - 1);
+
+    Out.ar(outBus, LeakDC.ar(sig));
+}).add;
+
+"--- BRAHMA: Make Noise Time-Domain Processors Loaded (6 modules) ---".postln;
 "  CHRONOS ECHO (Mimeophon) | CHRONOS PITCH (Echophon)".postln;
-"  MORPHEUS TAPE (Morphagene) | MORPHEUS PHONO (Phonogene)".postln;
-"  SPATIAL ERBE (Erbe-Verb)".postln;
+"  MORPHEUS TAPE (Morphagene-lite) | MORPHEUS PHONO (Phonogene)".postln;
+"  MORPHEUS REEL (Morphagene) | SPATIAL ERBE (Erbe-Verb)".postln;
+
+// ==========================================
+// PATCH BAY REGISTRATION — Make Noise Time Processors
+// ==========================================
+[
+    [\chronos_echo, [
+        [\time, "Delay time"], [\feedback, "Feedback"],
+        [\rate, "Modulation rate"], [\color, "Tone color"],
+        [\mix, "Dry/wet mix"]
+    ]],
+    [\chronos_pitch, [
+        [\shift, "Pitch shift"], [\feedback, "Feedback"],
+        [\mix, "Dry/wet mix"]
+    ]],
+    [\morpheus_tape, [
+        [\speed, "Tape speed"], [\feedback, "Feedback"],
+        [\mix, "Dry/wet mix"]
+    ]],
+    [\morpheus_phono, [
+        [\speed, "Speed"], [\grainSize, "Grain size"],
+        [\grainDensity, "Grain density"], [\mix, "Dry/wet mix"]
+    ]],
+    [\spatial_erbe, [
+        [\decay, "Reverb decay"], [\absorb, "HF absorption"],
+        [\size, "Room size"], [\tilt, "Spectral tilt"],
+        [\mix, "Dry/wet mix"]
+    ]],
+    [\morpheus_reel, [
+        [\gene, "Gene speed"], [\slide, "Slide smoothing"],
+        [\organize, "Position"], [\morph, "Splice crossfade"],
+        [\sos, "Sound-on-sound"], [\shift, "Pitch shift"],
+        [\geneSize, "Gene window size"], [\mix, "Dry/wet mix"]
+    ]]
+].do({ |moduleSpec|
+    var synthName = moduleSpec[0];
+    var params = moduleSpec[1];
+    params.do({ |p|
+        ~PATCH_BAY.registerDestination(
+            (synthName.asString ++ "_" ++ p[0].asString).asSymbol,
+            p[0], synthName.asString ++ " " ++ p[1]
+        );
+    });
+});
 )

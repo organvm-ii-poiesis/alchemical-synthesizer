@@ -231,4 +231,34 @@ SynthDef(\aqua_env_follower, {
 "--- BRAHMA: AQUA VITAE Modular Modulation Online (6 modules) ---".postln;
 "  AQUA_LFO | AQUA_SAMPLE_HOLD | AQUA_TRACK_HOLD".postln;
 "  AQUA_SLEW | AQUA_RANDOM | AQUA_ENV_FOLLOWER".postln;
+
+// ==========================================
+// PATCH BAY REGISTRATION — Modular Modulation Sources
+// ==========================================
+[
+    [\aqua_lfo, [
+        [\rate, "LFO rate"], [\shape, "Waveform shape"]
+    ]],
+    [\aqua_sample_hold, [
+        [\slew, "Slew amount"]
+    ]],
+    [\aqua_slew, [
+        [\rise, "Rise rate"], [\fall, "Fall rate"]
+    ]],
+    [\aqua_random, [
+        [\type, "Random type"], [\rate, "Rate"]
+    ]],
+    [\aqua_env_follower, [
+        [\attack, "Attack time"], [\release, "Release time"]
+    ]]
+].do({ |moduleSpec|
+    var synthName = moduleSpec[0];
+    var params = moduleSpec[1];
+    params.do({ |p|
+        ~PATCH_BAY.registerDestination(
+            (synthName.asString ++ "_" ++ p[0].asString).asSymbol,
+            p[0], synthName.asString ++ " " ++ p[1]
+        );
+    });
+});
 )
