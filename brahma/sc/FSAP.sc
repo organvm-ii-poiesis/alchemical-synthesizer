@@ -38,10 +38,14 @@ FSAP {
     // 3. Integration Phase
     integrate { |fidelity=1.0|
         if (state == \ABSORBING) {
-            state = \INTEGRATING;
-            // Apply fidelity loss
-            // In a real system, this would degrade the trait map
-            "FSAP: Integrated with fidelity %".format(fidelity).postln;
+            if (AdamKadmon.validateTraitMap(currentObservation)) {
+                state = \INTEGRATING;
+                currentObservation = AdamKadmon.normalize(currentObservation);
+                "FSAP: Integrated with fidelity %".format(fidelity).postln;
+            } {
+                "FSAP Error: TraitMap failed AdamKadmon validation".warn;
+                state = \IDLE;
+            }
         }
     }
     

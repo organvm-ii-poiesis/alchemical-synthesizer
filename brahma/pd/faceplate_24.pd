@@ -1,0 +1,14 @@
+#N canvas 100 100 400 500 10;
+#X obj 10 10 inletL;
+#X obj 40 10 inletR;
+#X obj 10 470 outletL;
+#X obj 40 470 outletR;
+#X obj 100 50 nbx 10 14 0 127 0 0 $0-p1 $0-label1 p1 0 -8 0 10 -262144 -1 -1 0 256;
+#X obj 100 80 nbx 10 14 0 127 0 0 $0-p2 $0-label2 p2 0 -8 0 10 -262144 -1 -1 0 256;
+#X obj 100 110 nbx 10 14 0 127 0 0 $0-p3 $0-label3 p3 0 -8 0 10 -262144 -1 -1 0 256;
+#X obj 100 200 hsl 128 15 0 127 0 0 $0-mod1 $0-label4 mod1 0 -8 0 10 -262144 -1 -1 0 1;
+#X obj 100 230 hsl 128 15 0 127 0 0 $0-mod2 $0-label5 mod2 0 -8 0 10 -262144 -1 -1 0 1;
+#X obj 100 260 hsl 128 15 0 127 0 0 $0-mod3 $0-label6 mod3 0 -8 0 10 -262144 -1 -1 0 1;
+#X obj 100 290 hsl 128 15 0 127 0 0 $0-mod4 $0-label7 mod4 0 -8 0 10 -262144 -1 -1 0 1;
+#X text 10 440 24HP HIGH-COGNITION NODE;
+#X obj 250 50 cnv 15 100 100 empty empty display 20 12 0 14 -233017 -66577 0;

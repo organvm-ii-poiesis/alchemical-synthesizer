@@ -7,6 +7,7 @@ var root = thisProcess.nowExecutingPath.dirname;
 
 // 1. Infrastructure
 (root +/+ "01_infrastructure.scd").load;
+(root +/+ "01_arbitration_engine.scd").load;
 
 // 2. Proteus & MAW
 (root +/+ "03_proteus_maw.scd").load;
@@ -19,6 +20,7 @@ var root = thisProcess.nowExecutingPath.dirname;
 
 // 5. Sampler Creatures
 (root +/+ "05_sampler_creatures.scd").load;
+(root +/+ "05_sampler_creatures_stereo.scd").load;
 
 // 6. Typhon
 (root +/+ "06_typhon.scd").load;

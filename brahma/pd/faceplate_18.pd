@@ -1,0 +1,11 @@
+#N canvas 100 100 300 400 10;
+#X obj 10 10 inletL;
+#X obj 40 10 inletR;
+#X obj 10 370 outletL;
+#X obj 40 370 outletR;
+#X obj 80 50 nbx 8 14 0 127 0 0 $0-main1 $0-label1 primary 0 -8 0 10 -262144 -1 -1 0 256;
+#X obj 80 80 nbx 8 14 0 127 0 0 $0-main2 $0-label2 secondary 0 -8 0 10 -262144 -1 -1 0 256;
+#X obj 80 150 vsl 15 128 0 127 0 0 $0-cv1 $0-label3 mod1 0 -8 0 10 -262144 -1 -1 0 1;
+#X obj 110 150 vsl 15 128 0 127 0 0 $0-cv2 $0-label4 mod2 0 -8 0 10 -262144 -1 -1 0 1;
+#X obj 140 150 vsl 15 128 0 127 0 0 $0-cv3 $0-label5 mod3 0 -8 0 10 -262144 -1 -1 0 1;
+#X text 10 340 18HP MODULE;
