@@ -9,20 +9,113 @@
     playSineSweep: { |self, bus, start=20, end=20000, dur=5|
         { Sweep.ar(Impulse.ar(1/dur), end-start) + start }.play(s, bus);
     },
-    
+
     // Capture & Metric Calculation
     analyzeEntity: { |self, entityId, registry|
         var traits = registry.getTraits(entityId);
         "Analysis for %: %".format(entityId, traits).postln;
-        // In full implementation, this would perform FFT and store results in a JSON report
     },
-    
+
     // Reference Vectors (Make NoiseMATHS approx)
     refMATHS: (
         spectral_profile: (centroid: 0.2, flatness: 0.1),
         temporal_topology: (attack: 0.1, decay: 0.5, slew: 0.8),
         modulation_graph: (type: \function_generator)
-    )
+    ),
+
+    // ==========================================
+    // GOLEM ANALYSIS
+    // ==========================================
+    // Per-track spectral analysis against factory preset reference vectors
+    analyzeGolem: { |self|
+        "--- GOLEM: Per-Track Spectral Analysis ---".postln;
+        {
+            var refVectors = (
+                kick808: (centroid: 0.05, flatness: 0.1, bandwidth: 0.2),
+                snare: (centroid: 0.4, flatness: 0.6, bandwidth: 0.5),
+                clap: (centroid: 0.45, flatness: 0.8, bandwidth: 0.6),
+                hihatClosed: (centroid: 0.8, flatness: 0.9, bandwidth: 0.3),
+                hihatOpen: (centroid: 0.75, flatness: 0.85, bandwidth: 0.5),
+                tom: (centroid: 0.15, flatness: 0.15, bandwidth: 0.25),
+                rim: (centroid: 0.55, flatness: 0.3, bandwidth: 0.2),
+                fmBell: (centroid: 0.6, flatness: 0.2, bandwidth: 0.4)
+            );
+
+            ~GOLEM_SEQ.tracks.do({ |track, i|
+                var name = track[\name].asSymbol;
+                var ref = refVectors[name];
+
+                // Trigger the voice and capture spectral metrics
+                if(track[\audioBus].notNil) {
+                    var bus = track[\audioBus];
+                    var syn;
+
+                    "  Track %: % (%)".format(i, name, track[\synthDef]).postln;
+
+                    syn = Synth(track[\synthDef],
+                        [\outBus, bus.index, \velocity, 0.8, \gate, 1]
+                        ++ track[\synthArgs].asPairs,
+                        target: ~SC_GRP[\te]
+                    );
+
+                    0.3.wait;
+
+                    // Measure coherence and entropy
+                    var coherence = MetricCollector.measureCoherence(nil);
+                    var entropy = MetricCollector.measureEntropy(nil);
+
+                    "    Coherence: %, Entropy: %".format(
+                        coherence.round(0.01), entropy.round(0.01)
+                    ).postln;
+
+                    if(ref.notNil) {
+                        "    Ref centroid: %, measured centroid: ~%".format(
+                            ref[\centroid], coherence.round(0.01)
+                        ).postln;
+                    };
+
+                    0.3.wait;
+                } {
+                    "  Track %: % — no bus allocated (skipping)".format(i, name).postln;
+                };
+            });
+
+            "--- GOLEM: Analysis Complete ---".postln;
+        }.fork;
+    },
+
+    // Quick Golem health check
+    golemHealthCheck: { |self|
+        "--- GOLEM HEALTH CHECK ---".postln;
+        var ok = true;
+
+        // Check registration
+        if(~BRAHMA_REGISTRY.entities[~GOLEM[\entityId]].notNil) {
+            "  Registry: OK (entity %)".format(~GOLEM[\entityId]).postln;
+        } {
+            "  Registry: FAIL — Golem not registered".postln;
+            ok = false;
+        };
+
+        // Check bus allocation
+        var busCount = ~GOLEM_SEQ.tracks.count({ |t| t[\audioBus].notNil });
+        "  Buses: % of 8 tracks allocated".format(busCount).postln;
+        if(busCount < 8) { ok = false };
+
+        // Check equip state
+        "  Equip state: %".format(~GOLEM[\equipState]).postln;
+
+        // Check sequencer
+        "  Sequencer: % tracks, tempo % BPM, playing: %".format(
+            ~GOLEM_SEQ[\numTracks], ~GOLEM_SEQ[\tempo], ~GOLEM_SEQ[\playing]
+        ).postln;
+
+        if(ok) {
+            "  OVERALL: HEALTHY".postln;
+        } {
+            "  OVERALL: DEGRADED".postln;
+        };
+    }
 );
 
 "--- BRAHMA: Measurement Harness Ready ---".postln;

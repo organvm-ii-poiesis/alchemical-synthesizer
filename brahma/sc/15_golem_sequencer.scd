@@ -1,0 +1,624 @@
+/*
+  Phase 15: Golem Sequencer Engine
+  Step sequencer, LFO engine, modulation matrix
+*/
+
+(
+// ==========================================
+// LFO SynthDef (control-rate, 3 per track = 24 total)
+// ==========================================
+SynthDef(\golem_lfo, {
+    |outBus=0, rate=1, shape=0, phase=0, gate=1|
+
+    var sig;
+
+    // 5 shapes: 0=sine, 1=square, 2=saw, 3=tri, 4=random
+    sig = Select.kr(shape.clip(0, 4), [
+        SinOsc.kr(rate, phase),
+        LFPulse.kr(rate, phase).bipolar,
+        LFSaw.kr(rate, phase),
+        LFTri.kr(rate, phase),
+        LFNoise1.kr(rate)
+    ]);
+
+    Out.kr(outBus, sig);
+}).add;
+
+// ==========================================
+// SEQUENCER ENGINE (language-side)
+// ==========================================
+~GOLEM_SEQ = (
+
+    // State
+    playing: false,
+    tempo: 120,
+    currentStep: 0,
+    numTracks: 8,
+    clock: nil,
+
+    // Track data: 8 tracks, each with pattern, settings, state
+    tracks: Array.fill(8, { |i|
+        (
+            id: i,
+            name: "Track " ++ (i + 1),
+            steps: 16,
+            swing: 0,  // 0..1, applied as offset on odd steps
+            pattern: Array.fill(16, {
+                (active: false, velocity: 0.8, pLocks: nil)
+            }),
+            automation: Dictionary.new,  // paramName -> Array[16] of values
+
+            // Engine state (which SynthDef + args)
+            synthDef: \drum_subtractive,
+            synthArgs: (freq: 150, cutoff: 2000, res: 1, envAmt: 0.5),
+
+            // Blend sources (synthA, synthB, sampleA, sampleB)
+            blend: (synthA: 1.0, synthB: 0.0, sampleA: 0.0, sampleB: 0.0),
+
+            // FX chain params
+            fx: (reverbMix: 0, reverbDecay: 1.5, delayMix: 0, delayTime: 0.25,
+                 delayFB: 0.3, bitcrush: 0, drive: 0),
+
+            // Humanization
+            humanize: (velRand: 0, timeRand: 0, pitchRand: 0, probability: 1),
+
+            // Mute/Solo/Group
+            muted: false,
+            solo: false,
+            muteGroup: nil,  // nil, \A, \B, \C, \D
+
+            // LFOs (3 per track)
+            lfos: Array.fill(3, { |j|
+                (rate: [1, 2, 0.5][j], shape: 0, phase: 0, bus: nil, synth: nil)
+            }),
+
+            // Modulation matrix entries for this track
+            modRoutes: List.new,
+
+            // Audio/control buses (allocated by ~GOLEM)
+            audioBus: nil,
+            fxBus: nil,
+
+            // Active synth nodes
+            activeSynths: nil,
+            fxSynths: nil
+        )
+    }),
+
+    // Scene save/recall
+    scenes: Dictionary.new,
+
+    // Mute groups
+    muteGroups: (\A: List.new, \B: List.new, \C: List.new, \D: List.new),
+
+    // Clipboard for copy/paste
+    clipboard: nil,
+
+    // ==========================================
+    // TRANSPORT
+    // ==========================================
+    play: { |self|
+        if(self.playing.not) {
+            self.playing = true;
+            self.currentStep = 0;
+            self.clock = TempoClock(self.tempo / 60);
+
+            Tdef(\golem_seq, {
+                loop {
+                    var stepDur, anyTrackSolo;
+
+                    // Calculate step duration with swing
+                    stepDur = 60 / self.tempo / 4; // 16th note
+
+                    // Check if any track is soloed
+                    anyTrackSolo = self.tracks.any({ |t| t[\solo] });
+
+                    // Trigger each track
+                    self.tracks.do({ |track, trackIdx|
+                        var step, shouldPlay, vel, args, pitchOff, timeOff;
+
+                        step = track[\pattern][self.currentStep % track[\steps]];
+
+                        // Determine if this track should sound
+                        shouldPlay = step[\active];
+                        if(track[\muted]) { shouldPlay = false };
+                        if(anyTrackSolo and: { track[\solo].not }) { shouldPlay = false };
+
+                        // Probability gate
+                        if(shouldPlay and: { track[\humanize][\probability] < 1.0 }) {
+                            if(track[\humanize][\probability].coin.not) {
+                                shouldPlay = false;
+                            };
+                        };
+
+                        if(shouldPlay) {
+                            // Velocity with humanization
+                            vel = step[\velocity];
+                            vel = vel + rrand(track[\humanize][\velRand].neg, track[\humanize][\velRand]);
+                            vel = vel.clip(0.01, 1.0);
+
+                            // Pitch randomization
+                            pitchOff = rrand(track[\humanize][\pitchRand].neg, track[\humanize][\pitchRand]);
+
+                            // Build args: base + p-locks
+                            args = track[\synthArgs].copy;
+                            if(step[\pLocks].notNil) {
+                                step[\pLocks].keysValuesDo({ |k, v|
+                                    args[k] = v;
+                                });
+                            };
+
+                            // Apply modulation matrix values
+                            self.applyModulation(track, self.currentStep, args);
+
+                            // Apply automation
+                            track[\automation].keysValuesDo({ |param, values|
+                                if(values[self.currentStep % track[\steps]].notNil) {
+                                    args[param.asSymbol] = values[self.currentStep % track[\steps]];
+                                };
+                            });
+
+                            // Add pitch offset
+                            args[\freq] = (args[\freq] ? 150) + pitchOff;
+
+                            // Trigger synth
+                            if(track[\audioBus].notNil) {
+                                {
+                                    // Time randomization (microsecond jitter)
+                                    var delay = rrand(0, track[\humanize][\timeRand].clip(0, 0.05));
+                                    delay.wait;
+
+                                    Synth(track[\synthDef],
+                                        [\outBus, track[\audioBus].index,
+                                         \velocity, vel, \gate, 1] ++ args.asPairs,
+                                        target: ~SC_GRP[\te]
+                                    );
+                                }.fork(self.clock);
+                            };
+
+                            // Broadcast trigger to Visual Cortex
+                            ~VISUAL_CORTEX.target.sendMsg(
+                                "/golem/track/trigger", trackIdx, vel
+                            );
+                        };
+                    });
+
+                    // Broadcast step position
+                    ~VISUAL_CORTEX.target.sendMsg(
+                        "/golem/step", self.currentStep
+                    );
+                    ~VISUAL_CORTEX.target.sendMsg(
+                        "/golem/seq/state", 1, self.tempo, self.currentStep
+                    );
+
+                    // Advance step
+                    self.currentStep = self.currentStep + 1;
+
+                    // Swing: offset odd steps
+                    if((self.currentStep % 2) == 1) {
+                        var maxSwing = self.tracks.collect({ |t| t[\swing] }).maxItem;
+                        (stepDur + (stepDur * maxSwing * 0.33)).wait;
+                    } {
+                        stepDur.wait;
+                    };
+                };
+            }).play;
+
+            "GOLEM: Sequencer playing at % BPM".format(self.tempo).postln;
+        };
+    },
+
+    stop: { |self|
+        if(self.playing) {
+            self.playing = false;
+            Tdef(\golem_seq).stop;
+            self.currentStep = 0;
+            ~VISUAL_CORTEX.target.sendMsg("/golem/seq/state", 0, self.tempo, 0);
+            "GOLEM: Sequencer stopped".postln;
+        };
+    },
+
+    setTempo: { |self, bpm|
+        self.tempo = bpm.clip(30, 300);
+        if(self.clock.notNil) {
+            self.clock.tempo = self.tempo / 60;
+        };
+        "GOLEM: Tempo set to % BPM".format(self.tempo).postln;
+    },
+
+    // ==========================================
+    // PATTERN EDITING
+    // ==========================================
+    toggleStep: { |self, trackIdx, stepIdx|
+        var step = self.tracks[trackIdx][\pattern][stepIdx];
+        step[\active] = step[\active].not;
+    },
+
+    setStepVelocity: { |self, trackIdx, stepIdx, vel|
+        self.tracks[trackIdx][\pattern][stepIdx][\velocity] = vel.clip(0.01, 1.0);
+    },
+
+    setStepPLock: { |self, trackIdx, stepIdx, param, value|
+        var step = self.tracks[trackIdx][\pattern][stepIdx];
+        if(step[\pLocks].isNil) { step[\pLocks] = Dictionary.new };
+        step[\pLocks][param.asSymbol] = value;
+    },
+
+    clearStepPLock: { |self, trackIdx, stepIdx, param|
+        var step = self.tracks[trackIdx][\pattern][stepIdx];
+        if(step[\pLocks].notNil) {
+            step[\pLocks].removeAt(param.asSymbol);
+            if(step[\pLocks].isEmpty) { step[\pLocks] = nil };
+        };
+    },
+
+    // ==========================================
+    // COPY/PASTE
+    // ==========================================
+    copyPattern: { |self, trackIdx|
+        self.clipboard = self.tracks[trackIdx][\pattern].deepCopy;
+        "GOLEM: Pattern from track % copied".format(trackIdx).postln;
+    },
+
+    pastePattern: { |self, trackIdx|
+        if(self.clipboard.notNil) {
+            self.tracks[trackIdx][\pattern] = self.clipboard.deepCopy;
+            "GOLEM: Pattern pasted to track %".format(trackIdx).postln;
+        };
+    },
+
+    // ==========================================
+    // SCENES
+    // ==========================================
+    saveScene: { |self, name|
+        self.scenes[name.asSymbol] = self.tracks.collect({ |t|
+            (
+                pattern: t[\pattern].deepCopy,
+                synthDef: t[\synthDef],
+                synthArgs: t[\synthArgs].copy,
+                blend: t[\blend].copy,
+                fx: t[\fx].copy,
+                muted: t[\muted],
+                solo: t[\solo]
+            )
+        });
+        "GOLEM: Scene '%' saved".format(name).postln;
+    },
+
+    loadScene: { |self, name|
+        var scene = self.scenes[name.asSymbol];
+        if(scene.notNil) {
+            scene.do({ |data, i|
+                self.tracks[i][\pattern] = data[\pattern].deepCopy;
+                self.tracks[i][\synthDef] = data[\synthDef];
+                self.tracks[i][\synthArgs] = data[\synthArgs].copy;
+                self.tracks[i][\blend] = data[\blend].copy;
+                self.tracks[i][\fx] = data[\fx].copy;
+                self.tracks[i][\muted] = data[\muted];
+                self.tracks[i][\solo] = data[\solo];
+            });
+            "GOLEM: Scene '%' loaded".format(name).postln;
+        } {
+            "GOLEM: Scene '%' not found".format(name).warn;
+        };
+    },
+
+    // ==========================================
+    // MUTE GROUPS
+    // ==========================================
+    setMuteGroup: { |self, trackIdx, group|
+        // Remove from old group
+        [\A, \B, \C, \D].do({ |g|
+            self.muteGroups[g].remove(trackIdx);
+        });
+        // Add to new group
+        if(group.notNil) {
+            self.tracks[trackIdx][\muteGroup] = group.asSymbol;
+            self.muteGroups[group.asSymbol].add(trackIdx);
+        } {
+            self.tracks[trackIdx][\muteGroup] = nil;
+        };
+    },
+
+    toggleMuteGroup: { |self, group|
+        var members = self.muteGroups[group.asSymbol];
+        if(members.notNil) {
+            var allMuted = members.every({ |idx| self.tracks[idx][\muted] });
+            members.do({ |idx|
+                self.tracks[idx][\muted] = allMuted.not;
+                ~VISUAL_CORTEX.target.sendMsg(
+                    "/golem/track/state", idx,
+                    self.tracks[idx][\muted].asInteger,
+                    self.tracks[idx][\solo].asInteger
+                );
+            });
+        };
+    },
+
+    // ==========================================
+    // MODULATION MATRIX
+    // ==========================================
+    // Sources: lfo1, lfo2, lfo3, env, random, stepPos, velocity, xyPadX, xyPadY, synthA, synthB
+    // Dests: synthA.freq, synthA.cutoff, synthA.res, synthA.ampEnv.d,
+    //        synthB.freq, synthB.cutoff, blend.synthA, blend.synthB,
+    //        blend.sampleA, blend.sampleB, pan, drive, delayMix, reverbMix, bitcrush
+
+    modSources: [\lfo1, \lfo2, \lfo3, \env, \random, \stepPos, \velocity,
+                 \xyPadX, \xyPadY, \synthA, \synthB],
+
+    modDests: [\synthA_freq, \synthA_cutoff, \synthA_res, \synthA_decay,
+               \synthB_freq, \synthB_cutoff,
+               \blend_synthA, \blend_synthB, \blend_sampleA, \blend_sampleB,
+               \pan, \drive, \delayMix, \reverbMix, \bitcrush],
+
+    // XY pad state (shared across tracks)
+    xyPad: (x: 0.5, y: 0.5),
+
+    addModRoute: { |self, trackIdx, source, dest, amount|
+        self.tracks[trackIdx][\modRoutes].add(
+            (source: source.asSymbol, dest: dest.asSymbol, amount: amount.clip(-1, 1))
+        );
+        "GOLEM: Mod route added (track %, % -> % @ %)".format(trackIdx, source, dest, amount).postln;
+    },
+
+    removeModRoute: { |self, trackIdx, index|
+        if(index < self.tracks[trackIdx][\modRoutes].size) {
+            self.tracks[trackIdx][\modRoutes].removeAt(index);
+        };
+    },
+
+    setModAmount: { |self, trackIdx, index, amount|
+        if(index < self.tracks[trackIdx][\modRoutes].size) {
+            self.tracks[trackIdx][\modRoutes][index][\amount] = amount.clip(-1, 1);
+        };
+    },
+
+    // Resolve a mod source value at trigger time
+    resolveModSource: { |self, track, source, step|
+        var val = 0;
+        case
+        { source == \lfo1 } { val = track[\lfos][0][\bus].notNil.if({ track[\lfos][0][\bus].getSynchronous }, 0) }
+        { source == \lfo2 } { val = track[\lfos][1][\bus].notNil.if({ track[\lfos][1][\bus].getSynchronous }, 0) }
+        { source == \lfo3 } { val = track[\lfos][2][\bus].notNil.if({ track[\lfos][2][\bus].getSynchronous }, 0) }
+        { source == \env } { val = 0 }  // placeholder — would read from envelope follower bus
+        { source == \random } { val = rrand(-1.0, 1.0) }
+        { source == \stepPos } { val = (step / (track[\steps] - 1)).linlin(0, 1, -1, 1) }
+        { source == \velocity } { val = track[\pattern][step % track[\steps]][\velocity].linlin(0, 1, -1, 1) }
+        { source == \xyPadX } { val = self.xyPad[\x].linlin(0, 1, -1, 1) }
+        { source == \xyPadY } { val = self.xyPad[\y].linlin(0, 1, -1, 1) }
+        { source == \synthA } { val = 0 }
+        { source == \synthB } { val = 0 };
+
+        ^val;
+    },
+
+    // Map dest name to actual SynthDef param
+    destToParam: { |self, dest|
+        var map = (
+            synthA_freq: \freq,
+            synthA_cutoff: \cutoff,
+            synthA_res: \res,
+            synthA_decay: \dec,
+            synthB_freq: \freq,
+            synthB_cutoff: \cutoff,
+            blend_synthA: \blendA,
+            blend_synthB: \blendB,
+            blend_sampleA: \blendSA,
+            blend_sampleB: \blendSB,
+            pan: \pan,
+            drive: \drive,
+            delayMix: \delayMix,
+            reverbMix: \reverbMix,
+            bitcrush: \bitcrush
+        );
+        ^map[dest];
+    },
+
+    // Apply all mod routes for a track at trigger time
+    applyModulation: { |self, track, step, args|
+        track[\modRoutes].do({ |route|
+            var srcVal = self.resolveModSource(track, route[\source], step);
+            var param = self.destToParam(route[\dest]);
+            var modVal = srcVal * route[\amount];
+
+            if(param.notNil and: { args[param].notNil }) {
+                args[param] = args[param] + (modVal * args[param].abs.max(1));
+            };
+        });
+    },
+
+    // ==========================================
+    // LFO MANAGEMENT
+    // ==========================================
+    startLFOs: { |self|
+        self.tracks.do({ |track, ti|
+            track[\lfos].do({ |lfo, li|
+                if(lfo[\bus].isNil) {
+                    lfo[\bus] = Bus.control(s, 1);
+                };
+                if(lfo[\synth].notNil) { lfo[\synth].free };
+                lfo[\synth] = Synth(\golem_lfo, [
+                    \outBus, lfo[\bus].index,
+                    \rate, lfo[\rate],
+                    \shape, lfo[\shape],
+                    \phase, lfo[\phase]
+                ]);
+            });
+        });
+        "GOLEM: LFOs started (24 total)".postln;
+    },
+
+    stopLFOs: { |self|
+        self.tracks.do({ |track|
+            track[\lfos].do({ |lfo|
+                if(lfo[\synth].notNil) { lfo[\synth].free; lfo[\synth] = nil };
+            });
+        });
+        "GOLEM: LFOs stopped".postln;
+    },
+
+    setLFOParam: { |self, trackIdx, lfoIdx, param, value|
+        var lfo = self.tracks[trackIdx][\lfos][lfoIdx];
+        lfo[param.asSymbol] = value;
+        if(lfo[\synth].notNil) {
+            lfo[\synth].set(param.asSymbol, value);
+        };
+        ~VISUAL_CORTEX.target.sendMsg(
+            "/golem/lfo/value", trackIdx, lfoIdx, value
+        );
+    },
+
+    // ==========================================
+    // OSC RESPONDERS
+    // ==========================================
+    initOSC: { |self|
+        // Transport
+        OSCdef(\golem_play, { self.play }, "/golem/transport/play");
+        OSCdef(\golem_stop, { self.stop }, "/golem/transport/stop");
+        OSCdef(\golem_tempo, { |msg| self.setTempo(msg[1]) }, "/golem/transport/tempo");
+
+        // Track control
+        OSCdef(\golem_track_mute, { |msg|
+            var idx = msg[1].asInteger;
+            self.tracks[idx][\muted] = self.tracks[idx][\muted].not;
+            ~VISUAL_CORTEX.target.sendMsg("/golem/track/state", idx,
+                self.tracks[idx][\muted].asInteger, self.tracks[idx][\solo].asInteger);
+        }, "/golem/track/mute");
+
+        OSCdef(\golem_track_solo, { |msg|
+            var idx = msg[1].asInteger;
+            self.tracks[idx][\solo] = self.tracks[idx][\solo].not;
+            ~VISUAL_CORTEX.target.sendMsg("/golem/track/state", idx,
+                self.tracks[idx][\muted].asInteger, self.tracks[idx][\solo].asInteger);
+        }, "/golem/track/solo");
+
+        // Step editing
+        OSCdef(\golem_step_toggle, { |msg|
+            self.toggleStep(msg[1].asInteger, msg[2].asInteger);
+        }, "/golem/step/toggle");
+
+        OSCdef(\golem_step_vel, { |msg|
+            self.setStepVelocity(msg[1].asInteger, msg[2].asInteger, msg[3].asFloat);
+        }, "/golem/step/velocity");
+
+        OSCdef(\golem_step_plock, { |msg|
+            self.setStepPLock(msg[1].asInteger, msg[2].asInteger, msg[3], msg[4].asFloat);
+        }, "/golem/step/plock");
+
+        // Engine params
+        OSCdef(\golem_engine_param, { |msg|
+            var trackIdx = msg[1].asInteger;
+            var param = msg[2].asSymbol;
+            var value = msg[3].asFloat;
+            self.tracks[trackIdx][\synthArgs][param] = value;
+            ~VISUAL_CORTEX.target.sendMsg("/golem/engine/state", trackIdx,
+                self.tracks[trackIdx][\synthDef], value, value);
+        }, "/golem/engine/param");
+
+        // LFO params
+        OSCdef(\golem_lfo_param, { |msg|
+            self.setLFOParam(msg[1].asInteger, msg[2].asInteger, msg[3], msg[4].asFloat);
+        }, "/golem/lfo/param");
+
+        // Modulation
+        OSCdef(\golem_mod_add, { |msg|
+            self.addModRoute(msg[1].asInteger, msg[2], msg[3], msg[4].asFloat);
+        }, "/golem/mod/add");
+
+        OSCdef(\golem_mod_remove, { |msg|
+            self.removeModRoute(msg[1].asInteger, msg[2].asInteger);
+        }, "/golem/mod/remove");
+
+        OSCdef(\golem_mod_amount, { |msg|
+            self.setModAmount(msg[1].asInteger, msg[2].asInteger, msg[3].asFloat);
+        }, "/golem/mod/amount");
+
+        // FX
+        OSCdef(\golem_fx_param, { |msg|
+            var trackIdx = msg[1].asInteger;
+            var fxName = msg[2].asSymbol;
+            var param = msg[3].asSymbol;
+            var value = msg[4].asFloat;
+            self.tracks[trackIdx][\fx][param] = value;
+            // Update running FX synth if present
+            if(self.tracks[trackIdx][\fxSynths].notNil) {
+                self.tracks[trackIdx][\fxSynths].do({ |syn|
+                    syn.set(param, value);
+                });
+            };
+        }, "/golem/fx/param");
+
+        // Preset
+        OSCdef(\golem_preset_load, { |msg|
+            var trackIdx = msg[1].asInteger;
+            var name = msg[2].asSymbol;
+            var preset = ~GOLEM_PATTERNS.factory[name];
+            if(preset.isNil) { preset = ~GOLEM_PATTERNS.loadPreset(name) };
+            if(preset.notNil) {
+                self.tracks[trackIdx][\synthDef] = preset[\synthDef];
+                self.tracks[trackIdx][\synthArgs] = preset[\args].copy;
+            };
+        }, "/golem/preset/load");
+
+        OSCdef(\golem_preset_save, { |msg|
+            var trackIdx = msg[1].asInteger;
+            var name = msg[2].asString;
+            ~GOLEM_PATTERNS.savePreset(name, (
+                synthDef: self.tracks[trackIdx][\synthDef],
+                args: self.tracks[trackIdx][\synthArgs].copy
+            ));
+        }, "/golem/preset/save");
+
+        // Scene
+        OSCdef(\golem_scene_save, { |msg| self.saveScene(msg[1]) }, "/golem/scene/save");
+        OSCdef(\golem_scene_load, { |msg| self.loadScene(msg[1]) }, "/golem/scene/load");
+
+        // Pad trigger (immediate play)
+        OSCdef(\golem_pad_trigger, { |msg|
+            var trackIdx = msg[1].asInteger;
+            var vel = msg[2].asFloat;
+            var track = self.tracks[trackIdx];
+            if(track[\audioBus].notNil) {
+                Synth(track[\synthDef],
+                    [\outBus, track[\audioBus].index,
+                     \velocity, vel, \gate, 1] ++ track[\synthArgs].asPairs,
+                    target: ~SC_GRP[\te]
+                );
+            };
+        }, "/golem/pad/trigger");
+
+        // XY pad
+        OSCdef(\golem_xy, { |msg|
+            self.xyPad[\x] = msg[1].asFloat;
+            self.xyPad[\y] = msg[2].asFloat;
+        }, "/golem/xy/update");
+
+        // Mute groups
+        OSCdef(\golem_mutegroup, { |msg|
+            self.toggleMuteGroup(msg[1]);
+        }, "/golem/mutegroup/toggle");
+
+        // Generative
+        OSCdef(\golem_gen_variation, { |msg|
+            var trackIdx = msg[1].asInteger;
+            var amount = msg[2] !? { msg[2].asFloat } ?? 0.3;
+            self.tracks[trackIdx][\pattern] = ~GOLEM_PATTERNS.generateVariation(
+                self.tracks[trackIdx][\pattern], amount
+            );
+        }, "/golem/gen/variation");
+
+        OSCdef(\golem_gen_fill, { |msg|
+            var trackIdx = msg[1].asInteger;
+            var fillLen = msg[2] !? { msg[2].asInteger } ?? 4;
+            var density = msg[3] !? { msg[3].asFloat } ?? 0.75;
+            self.tracks[trackIdx][\pattern] = ~GOLEM_PATTERNS.generateFill(
+                self.tracks[trackIdx][\steps], fillLen, density
+            );
+        }, "/golem/gen/fill");
+
+        "GOLEM: OSC responders initialized".postln;
+    }
+);
+
+"--- BRAHMA: Golem Sequencer Engine Loaded ---".postln;
+)

@@ -39,5 +39,12 @@ var root = thisProcess.nowExecutingPath.dirname;
 // 14. Visual Cortex
 (root +/+ "14_visual_cortex.scd").load;
 
+// 15. Golem Percussion Organism
+(root +/+ "15_percussion_suite.scd").load;
+(root +/+ "15_golem_fx.scd").load;
+(root +/+ "15_golem_patterns.scd").load;
+(root +/+ "15_golem_sequencer.scd").load;
+(root +/+ "15_golem.scd").load;
+
 "--- BRAHMA SYSTEM ONLINE ---".postln;
 )
