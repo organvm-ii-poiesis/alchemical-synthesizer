@@ -81,11 +81,9 @@ SynthDef(\pneuma_spectrum, {
     flatness = SpecFlatness.kr(fft);
     flatness = flatness.clip(0, 1);
 
-    // Spectral flux via FFT subtraction between consecutive frames.
-    // Compare current frame magnitude to a delayed copy using PV_MagSquared
-    // and a simple differencing approach via RunningSum on the amplitude.
-    flux = FFTFlux.kr(fft);
-    flux = flux.clip(0, 1);
+    // Spectral flux approximation (FFTFlux requires sc3-plugins):
+    // Track rate of amplitude change as a proxy for spectral change
+    flux = (Slope.kr(Amplitude.kr(input, 0.01, 0.1)).abs * 10).clip(0, 1);
 
     Out.kr(outBusCentroid, centroid);
     Out.kr(outBusFlatness, flatness);
@@ -129,7 +127,7 @@ SynthDef(\pneuma_onset, {
 // Language-side mapper that accepts arbitrary named sensor values
 // via OSC, scales them through configurable mapping curves,
 // and writes the result to control buses.
-~SENSORIUM = (
+~sensorium = (
     mappings: IdentityDictionary.new,
 
     // Register a named sensor mapping
@@ -219,7 +217,7 @@ OSCdef(\sensorium_input, { |msg, time, addr|
     // Extract sensor name from address: /brahma/sensor/[name]
     if(fullAddr.beginsWith("/brahma/sensor/")) {
         sensorName = fullAddr.drop(15); // Length of "/brahma/sensor/"
-        ~SENSORIUM.processSensor(sensorName, value);
+        ~sensorium.processSensor(sensorName, value);
     };
 }, "/brahma/sensor", recvPort: nil);
 
@@ -235,13 +233,13 @@ OSCdef(\sensorium_map, { |msg|
     var curve  = if(msg[7].notNil) { msg[7].asString.asSymbol } { \linear };
     var bus    = Bus(\control, busIdx, 1, s);
 
-    ~SENSORIUM.addMapping(name, bus, minIn, maxIn, minOut, maxOut, curve);
+    ~sensorium.addMapping(name, bus, minIn, maxIn, minOut, maxOut, curve);
 }, "/sensorium/map");
 
 // /sensorium/unmap [name]
 OSCdef(\sensorium_unmap, { |msg|
     var name = msg[1].asString;
-    ~SENSORIUM.removeMapping(name);
+    ~sensorium.removeMapping(name);
 }, "/sensorium/unmap");
 
 // --- PNEUMA Configuration ---
@@ -256,26 +254,26 @@ OSCdef(\pneuma_config, { |msg|
 
     switch(type,
         "amplitude", {
-            if(~PNEUMA_AMP.notNil) {
-                ~PNEUMA_AMP.set(param, value);
+            if(~pneuma_amp.notNil) {
+                ~pneuma_amp.set(param, value);
                 ("PNEUMA: amplitude." ++ param ++ " = " ++ value).postln;
             };
         },
         "pitch", {
-            if(~PNEUMA_PITCH.notNil) {
-                ~PNEUMA_PITCH.set(param, value);
+            if(~pneuma_pitch.notNil) {
+                ~pneuma_pitch.set(param, value);
                 ("PNEUMA: pitch." ++ param ++ " = " ++ value).postln;
             };
         },
         "spectrum", {
-            if(~PNEUMA_SPECTRUM.notNil) {
-                ~PNEUMA_SPECTRUM.set(param, value);
+            if(~pneuma_spectrum.notNil) {
+                ~pneuma_spectrum.set(param, value);
                 ("PNEUMA: spectrum." ++ param ++ " = " ++ value).postln;
             };
         },
         "onset", {
-            if(~PNEUMA_ONSET.notNil) {
-                ~PNEUMA_ONSET.set(param, value);
+            if(~pneuma_onset.notNil) {
+                ~pneuma_onset.set(param, value);
                 ("PNEUMA: onset." ++ param ++ " = " ++ value).postln;
             };
         },
@@ -288,10 +286,10 @@ OSCdef(\pneuma_config, { |msg|
 // ==========================================
 // Placeholder synth references — assigned during performance instantiation.
 // Set these globals when spawning PNEUMA analysis synths in a patch.
-~PNEUMA_AMP      = nil;
-~PNEUMA_PITCH    = nil;
-~PNEUMA_SPECTRUM = nil;
-~PNEUMA_ONSET    = nil;
+~pneuma_amp      = nil;
+~pneuma_pitch    = nil;
+~pneuma_spectrum = nil;
+~pneuma_onset    = nil;
 
 "--- BRAHMA: CORPUS HERMETICUM Sensors Online (5 modules) ---".postln;
 "  PNEUMA: Amplitude | Pitch | Spectrum | Onset".postln;
@@ -316,7 +314,7 @@ OSCdef(\pneuma_config, { |msg|
     var synthName = moduleSpec[0];
     var params = moduleSpec[1];
     params.do({ |p|
-        ~PATCH_BAY.registerDestination(
+        ~patch_bay.registerDestination(
             (synthName.asString ++ "_" ++ p[0].asString).asSymbol,
             p[0], synthName.asString ++ " " ++ p[1]
         );

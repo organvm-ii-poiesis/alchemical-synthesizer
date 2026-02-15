@@ -15,9 +15,10 @@ SynthDef(\calcination_overdrive, {
     driven = (input * (1 + (gain.clip(0, 1) * 19))).tanh;
 
     // Asymmetry: clip positive side more than negative
-    if(asymmetry > 0, {
-        driven = driven.clip(asymmetry.clip(0, 0.5).neg, 1);
-    });
+    driven = Select.ar((asymmetry > 0), [
+        driven,
+        driven.clip(asymmetry.clip(0, 0.5).neg, 1)
+    ]);
 
     toned = LPF.ar(driven, tone.linexp(0, 1, 500, 15000));
 
@@ -164,7 +165,7 @@ SynthDef(\calcination_clipper, {
     var synthName = moduleSpec[0];
     var params = moduleSpec[1];
     params.do({ |p|
-        ~PATCH_BAY.registerDestination(
+        ~patch_bay.registerDestination(
             (synthName.asString ++ "_" ++ p[0].asString).asSymbol,
             p[0], synthName.asString ++ " " ++ p[1]
         );
@@ -172,52 +173,52 @@ SynthDef(\calcination_clipper, {
 });
 
 // --- MODULE REGISTRY REGISTRATION ---
-if(~MODULE_REGISTRY.notNil) {
-    ~MODULE_REGISTRY.register(\calcination_overdrive, \fx, \calcination_overdrive, [
+if(~module_registry.notNil) {
+    ~module_registry.register(\calcination_overdrive, \fx, \calcination_overdrive, [
         (\name: \mix, \default: 0.5, \min: 0, \max: 1, \units: "wet", \desc: "Dry/wet mix"),
         (\name: \bypass, \default: 0, \min: 0, \max: 1, \units: "", \desc: "Bypass toggle"),
         (\name: \gain, \default: 0.5, \min: 0, \max: 1, \units: "", \desc: "Drive gain amount"),
         (\name: \tone, \default: 0.5, \min: 0, \max: 1, \units: "", \desc: "Tone (LP filter)"),
         (\name: \asymmetry, \default: 0, \min: 0, \max: 0.5, \units: "", \desc: "Asymmetric clipping"),
-    ], ~SC_GRP[\rr], "Overdrive with tone and asymmetry");
+    ], ~sc_grp[\rr], "Overdrive with tone and asymmetry");
 
-    ~MODULE_REGISTRY.register(\calcination_fuzz, \fx, \calcination_fuzz, [
+    ~module_registry.register(\calcination_fuzz, \fx, \calcination_fuzz, [
         (\name: \mix, \default: 0.5, \min: 0, \max: 1, \units: "wet", \desc: "Dry/wet mix"),
         (\name: \bypass, \default: 0, \min: 0, \max: 1, \units: "", \desc: "Bypass toggle"),
         (\name: \gain, \default: 0.7, \min: 0, \max: 1, \units: "", \desc: "Fuzz gain"),
         (\name: \gateThreshold, \default: 0.01, \min: 0, \max: 0.1, \units: "", \desc: "Gate threshold to clean noise floor"),
         (\name: \octaveUp, \default: 0, \min: 0, \max: 1, \units: "", \desc: "Octave-up rectification (0=off, 1=on)"),
-    ], ~SC_GRP[\rr], "Hard-clipping fuzz with octave-up");
+    ], ~sc_grp[\rr], "Hard-clipping fuzz with octave-up");
 
-    ~MODULE_REGISTRY.register(\calcination_waveshaper, \fx, \calcination_waveshaper, [
+    ~module_registry.register(\calcination_waveshaper, \fx, \calcination_waveshaper, [
         (\name: \mix, \default: 0.5, \min: 0, \max: 1, \units: "wet", \desc: "Dry/wet mix"),
         (\name: \bypass, \default: 0, \min: 0, \max: 1, \units: "", \desc: "Bypass toggle"),
         (\name: \transferFunc, \default: 0, \min: 0, \max: 3, \units: "", \desc: "Transfer function (0=tanh, 1=sine, 2=chebyshev, 3=sigmoid)"),
         (\name: \drive, \default: 0.5, \min: 0, \max: 1, \units: "", \desc: "Drive amount"),
-    ], ~SC_GRP[\rr], "Waveshaper with selectable transfer functions");
+    ], ~sc_grp[\rr], "Waveshaper with selectable transfer functions");
 
-    ~MODULE_REGISTRY.register(\calcination_tube, \fx, \calcination_tube, [
+    ~module_registry.register(\calcination_tube, \fx, \calcination_tube, [
         (\name: \mix, \default: 0.5, \min: 0, \max: 1, \units: "wet", \desc: "Dry/wet mix"),
         (\name: \bypass, \default: 0, \min: 0, \max: 1, \units: "", \desc: "Bypass toggle"),
         (\name: \drive, \default: 0.5, \min: 0, \max: 1, \units: "", \desc: "Tube drive"),
         (\name: \bias, \default: 0.1, \min: -0.5, \max: 0.5, \units: "", \desc: "DC bias for asymmetric saturation"),
         (\name: \sag, \default: 0.1, \min: 0, \max: 1, \units: "", \desc: "Power supply sag simulation"),
-    ], ~SC_GRP[\rr], "Tube saturation with bias and sag");
+    ], ~sc_grp[\rr], "Tube saturation with bias and sag");
 
-    ~MODULE_REGISTRY.register(\calcination_decimator, \fx, \calcination_decimator, [
+    ~module_registry.register(\calcination_decimator, \fx, \calcination_decimator, [
         (\name: \mix, \default: 0.5, \min: 0, \max: 1, \units: "wet", \desc: "Dry/wet mix"),
         (\name: \bypass, \default: 0, \min: 0, \max: 1, \units: "", \desc: "Bypass toggle"),
         (\name: \sampleRate, \default: 0.5, \min: 0, \max: 1, \units: "", \desc: "Sample rate reduction (0=full, 1=lo-fi)"),
         (\name: \bitDepth, \default: 0.5, \min: 0, \max: 1, \units: "", \desc: "Bit depth reduction (0=24bit, 1=2bit)"),
-    ], ~SC_GRP[\rr], "Sample rate and bit depth decimator");
+    ], ~sc_grp[\rr], "Sample rate and bit depth decimator");
 
-    ~MODULE_REGISTRY.register(\calcination_clipper, \fx, \calcination_clipper, [
+    ~module_registry.register(\calcination_clipper, \fx, \calcination_clipper, [
         (\name: \mix, \default: 1.0, \min: 0, \max: 1, \units: "wet", \desc: "Dry/wet mix"),
         (\name: \bypass, \default: 0, \min: 0, \max: 1, \units: "", \desc: "Bypass toggle"),
         (\name: \clipType, \default: 0, \min: 0, \max: 1, \units: "", \desc: "Clip type (0=hard, 1=soft)"),
         (\name: \threshold, \default: 0.8, \min: 0.01, \max: 1, \units: "", \desc: "Clip threshold"),
         (\name: \ceiling, \default: 1.0, \min: 0.1, \max: 2, \units: "", \desc: "Output ceiling"),
-    ], ~SC_GRP[\rr], "Hard/soft clipper");
+    ], ~sc_grp[\rr], "Hard/soft clipper");
 
     "  -> 6 Distortion FX registered with Module Registry".postln;
 };

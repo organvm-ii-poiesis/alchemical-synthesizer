@@ -8,7 +8,7 @@
 // ==========================================
 // PRESET MANAGEMENT SYSTEM
 // ==========================================
-~SCRIPTORIUM_PRESETS = (
+~scriptorium_presets = (
     presetDir: Platform.userAppSupportDir +/+ "BrahmaPresets",
     modulePresets: IdentityDictionary.new,
 
@@ -161,29 +161,29 @@
         state = IdentityDictionary.new;
 
         // Capture Chronos state
-        if(~CHRONOS.notNil) {
-            state[\chronos_tempo] = ~CHRONOS[\tempo];
-            state[\chronos_playing] = ~CHRONOS[\playing];
-            state[\chronos_globalSwing] = ~CHRONOS[\globalSwing];
-            state[\chronos_currentScene] = ~CHRONOS[\currentScene];
-            state[\chronos_numTracks] = ~CHRONOS[\numActiveTracks];
+        if(~chronos.notNil) {
+            state[\chronos_tempo] = ~chronos[\tempo];
+            state[\chronos_playing] = ~chronos[\playing];
+            state[\chronos_globalSwing] = ~chronos[\globalSwing];
+            state[\chronos_currentScene] = ~chronos[\currentScene];
+            state[\chronos_numTracks] = ~chronos[\numActiveTracks];
         };
 
         // Capture tuning state
-        if(~BRAHMA_TUNING.notNil) {
-            state[\tuning_rootHz] = ~BRAHMA_TUNING[\rootHz];
-            state[\tuning_transpose] = ~BRAHMA_TUNING[\transpose];
+        if(~brahma_tuning.notNil) {
+            state[\tuning_rootHz] = ~brahma_tuning[\rootHz];
+            state[\tuning_transpose] = ~brahma_tuning[\transpose];
         };
 
         // Capture patch bay state
-        if(~PATCH_BAY.notNil) {
-            state[\patchBay_routes] = ~PATCH_BAY.activeRoutes.size;
+        if(~patch_bay.notNil) {
+            state[\patchBay_routes] = ~patch_bay.activeRoutes.size;
         };
 
         // Capture sync state
-        if(~SCRIPTORIUM_SYNC.notNil) {
-            state[\sync_midiClockRunning] = ~SCRIPTORIUM_SYNC[\midiClockRunning];
-            state[\sync_linkActive] = ~SCRIPTORIUM_SYNC[\linkClock].notNil;
+        if(~scriptorium_sync.notNil) {
+            state[\sync_midiClockRunning] = ~scriptorium_sync[\midiClockRunning];
+            state[\sync_linkActive] = ~scriptorium_sync[\linkClock].notNil;
         };
 
         // Serialize as SC compile string (safe for re-interpretation)
@@ -201,15 +201,15 @@
             var state = contents.interpret;
             if(state.notNil) {
                 // Restore Chronos
-                if(state[\chronos_tempo].notNil and: { ~CHRONOS.notNil }) {
-                    ~CHRONOS[\tempo] = state[\chronos_tempo];
-                    ~CHRONOS[\globalSwing] = state[\chronos_globalSwing] ? 0.0;
+                if(state[\chronos_tempo].notNil and: { ~chronos.notNil }) {
+                    ~chronos[\tempo] = state[\chronos_tempo];
+                    ~chronos[\globalSwing] = state[\chronos_globalSwing] ? 0.0;
                 };
 
                 // Restore tuning
-                if(state[\tuning_rootHz].notNil and: { ~BRAHMA_TUNING.notNil }) {
-                    ~BRAHMA_TUNING[\rootHz] = state[\tuning_rootHz];
-                    ~BRAHMA_TUNING[\transpose] = state[\tuning_transpose] ? 0;
+                if(state[\tuning_rootHz].notNil and: { ~brahma_tuning.notNil }) {
+                    ~brahma_tuning[\rootHz] = state[\tuning_rootHz];
+                    ~brahma_tuning[\transpose] = state[\tuning_transpose] ? 0;
                 };
 
                 "SCRIPTORIUM PRESETS: Project '%' loaded".format(projectName).postln;
@@ -246,12 +246,12 @@
 );
 
 // Initialize preset system
-~SCRIPTORIUM_PRESETS.init;
+~scriptorium_presets.init;
 
 // ==========================================
 // UNDO/REDO SYSTEM (Global Scope)
 // ==========================================
-~SCRIPTORIUM_UNDO = (
+~scriptorium_undo = (
     snapshots: List.new,
     position: -1,
     maxSnapshots: 32,
@@ -273,20 +273,20 @@
         state[\timestamp] = Main.elapsedTime;
 
         // Capture Chronos tempo and swing
-        if(~CHRONOS.notNil) {
-            state[\chronos_tempo] = ~CHRONOS[\tempo];
-            state[\chronos_globalSwing] = ~CHRONOS[\globalSwing];
+        if(~chronos.notNil) {
+            state[\chronos_tempo] = ~chronos[\tempo];
+            state[\chronos_globalSwing] = ~chronos[\globalSwing];
         };
 
         // Capture patch bay connections (deep copy)
-        if(~PATCH_BAY.notNil) {
-            state[\patchBay_routes] = ~PATCH_BAY.activeRoutes.deepCopy;
+        if(~patch_bay.notNil) {
+            state[\patchBay_routes] = ~patch_bay.activeRoutes.deepCopy;
         };
 
         // Capture tuning
-        if(~BRAHMA_TUNING.notNil) {
-            state[\tuning_rootHz] = ~BRAHMA_TUNING[\rootHz];
-            state[\tuning_transpose] = ~BRAHMA_TUNING[\transpose];
+        if(~brahma_tuning.notNil) {
+            state[\tuning_rootHz] = ~brahma_tuning[\rootHz];
+            state[\tuning_transpose] = ~brahma_tuning[\transpose];
         };
 
         self[\snapshots].add(state);
@@ -307,20 +307,21 @@
 
     undo: { |self|
         if(self[\position] > 0) {
+            var state;
             self[\position] = self[\position] - 1;
 
-            var state = self[\snapshots][self[\position]];
+            state = self[\snapshots][self[\position]];
 
             // Restore Chronos
-            if(state[\chronos_tempo].notNil and: { ~CHRONOS.notNil }) {
-                ~CHRONOS[\tempo] = state[\chronos_tempo];
-                ~CHRONOS[\globalSwing] = state[\chronos_globalSwing] ? 0.0;
+            if(state[\chronos_tempo].notNil and: { ~chronos.notNil }) {
+                ~chronos[\tempo] = state[\chronos_tempo];
+                ~chronos[\globalSwing] = state[\chronos_globalSwing] ? 0.0;
             };
 
             // Restore tuning
-            if(state[\tuning_rootHz].notNil and: { ~BRAHMA_TUNING.notNil }) {
-                ~BRAHMA_TUNING[\rootHz] = state[\tuning_rootHz];
-                ~BRAHMA_TUNING[\transpose] = state[\tuning_transpose] ? 0;
+            if(state[\tuning_rootHz].notNil and: { ~brahma_tuning.notNil }) {
+                ~brahma_tuning[\rootHz] = state[\tuning_rootHz];
+                ~brahma_tuning[\transpose] = state[\tuning_transpose] ? 0;
             };
 
             "SCRIPTORIUM UNDO: Undo → '%' (position %)".format(
@@ -338,20 +339,21 @@
 
     redo: { |self|
         if(self[\position] < (self[\snapshots].size - 1)) {
+            var state;
             self[\position] = self[\position] + 1;
 
-            var state = self[\snapshots][self[\position]];
+            state = self[\snapshots][self[\position]];
 
             // Restore Chronos
-            if(state[\chronos_tempo].notNil and: { ~CHRONOS.notNil }) {
-                ~CHRONOS[\tempo] = state[\chronos_tempo];
-                ~CHRONOS[\globalSwing] = state[\chronos_globalSwing] ? 0.0;
+            if(state[\chronos_tempo].notNil and: { ~chronos.notNil }) {
+                ~chronos[\tempo] = state[\chronos_tempo];
+                ~chronos[\globalSwing] = state[\chronos_globalSwing] ? 0.0;
             };
 
             // Restore tuning
-            if(state[\tuning_rootHz].notNil and: { ~BRAHMA_TUNING.notNil }) {
-                ~BRAHMA_TUNING[\rootHz] = state[\tuning_rootHz];
-                ~BRAHMA_TUNING[\transpose] = state[\tuning_transpose] ? 0;
+            if(state[\tuning_rootHz].notNil and: { ~brahma_tuning.notNil }) {
+                ~brahma_tuning[\rootHz] = state[\tuning_rootHz];
+                ~brahma_tuning[\transpose] = state[\tuning_transpose] ? 0;
             };
 
             "SCRIPTORIUM UNDO: Redo → '%' (position %)".format(
@@ -413,18 +415,18 @@ OSCdef(\scriptorium_preset_save, { |msg|
         idx = idx + 2;
     };
 
-    ~SCRIPTORIUM_PRESETS.saveModulePreset(moduleName, presetName, params);
+    ~scriptorium_presets.saveModulePreset(moduleName, presetName, params);
 }, "/scriptorium/preset/save");
 
 // /scriptorium/preset/load <module:string> <name:string>
 OSCdef(\scriptorium_preset_load, { |msg|
     var moduleName = msg[1].asString;
     var presetName = msg[2].asString;
-    var preset = ~SCRIPTORIUM_PRESETS.loadModulePreset(moduleName, presetName);
+    var preset = ~scriptorium_presets.loadModulePreset(moduleName, presetName);
 
     // Broadcast loaded preset to Visual Cortex
-    if(preset.notNil and: { ~VISUAL_CORTEX.notNil }) {
-        ~VISUAL_CORTEX[\target].sendMsg(
+    if(preset.notNil and: { ~visual_cortex.notNil }) {
+        ~visual_cortex[\target].sendMsg(
             "/brahma/preset/loaded", moduleName, presetName);
     };
 }, "/scriptorium/preset/load");
@@ -432,12 +434,12 @@ OSCdef(\scriptorium_preset_load, { |msg|
 // /scriptorium/preset/list <module:string>
 OSCdef(\scriptorium_preset_list, { |msg|
     var moduleName = msg[1].asString;
-    var presets = ~SCRIPTORIUM_PRESETS.listPresets(moduleName);
+    var presets = ~scriptorium_presets.listPresets(moduleName);
 
     // Broadcast list to Visual Cortex
-    if(~VISUAL_CORTEX.notNil) {
+    if(~visual_cortex.notNil) {
         presets.do({ |name|
-            ~VISUAL_CORTEX[\target].sendMsg(
+            ~visual_cortex[\target].sendMsg(
                 "/brahma/preset/item", moduleName, name);
         });
     };
@@ -445,7 +447,7 @@ OSCdef(\scriptorium_preset_list, { |msg|
 
 // /scriptorium/preset/delete <module:string> <name:string>
 OSCdef(\scriptorium_preset_delete, { |msg|
-    ~SCRIPTORIUM_PRESETS.deleteModulePreset(msg[1].asString, msg[2].asString);
+    ~scriptorium_presets.deleteModulePreset(msg[1].asString, msg[2].asString);
 }, "/scriptorium/preset/delete");
 
 // /scriptorium/preset/morph <module:string> <presetA:string> <presetB:string> <amount:float>
@@ -454,7 +456,7 @@ OSCdef(\scriptorium_preset_morph, { |msg|
     var presetA = msg[2].asString;
     var presetB = msg[3].asString;
     var amount = msg[4].asFloat;
-    ~SCRIPTORIUM_PRESETS.morphNamedPresets(moduleName, presetA, presetB, amount);
+    ~scriptorium_presets.morphNamedPresets(moduleName, presetA, presetB, amount);
 }, "/scriptorium/preset/morph");
 
 // ==========================================
@@ -463,27 +465,27 @@ OSCdef(\scriptorium_preset_morph, { |msg|
 
 // /scriptorium/project/save <name:string>
 OSCdef(\scriptorium_project_save, { |msg|
-    ~SCRIPTORIUM_PRESETS.saveProject(msg[1].asString);
+    ~scriptorium_presets.saveProject(msg[1].asString);
 }, "/scriptorium/project/save");
 
 // /scriptorium/project/load <name:string>
 OSCdef(\scriptorium_project_load, { |msg|
-    ~SCRIPTORIUM_PRESETS.loadProject(msg[1].asString);
+    ~scriptorium_presets.loadProject(msg[1].asString);
 }, "/scriptorium/project/load");
 
 // /scriptorium/project/list
 OSCdef(\scriptorium_project_list, {
-    var projects = ~SCRIPTORIUM_PRESETS.listProjects;
-    if(~VISUAL_CORTEX.notNil) {
+    var projects = ~scriptorium_presets.listProjects;
+    if(~visual_cortex.notNil) {
         projects.do({ |name|
-            ~VISUAL_CORTEX[\target].sendMsg("/brahma/project/item", name);
+            ~visual_cortex[\target].sendMsg("/brahma/project/item", name);
         });
     };
 }, "/scriptorium/project/list");
 
 // /scriptorium/project/delete <name:string>
 OSCdef(\scriptorium_project_delete, { |msg|
-    ~SCRIPTORIUM_PRESETS.deleteProject(msg[1].asString);
+    ~scriptorium_presets.deleteProject(msg[1].asString);
 }, "/scriptorium/project/delete");
 
 // ==========================================
@@ -493,27 +495,27 @@ OSCdef(\scriptorium_project_delete, { |msg|
 // /scriptorium/undo/capture [label:string]
 OSCdef(\scriptorium_undo_capture, { |msg|
     var label = msg[1] !? _.asString ?? "manual snapshot";
-    ~SCRIPTORIUM_UNDO.capture(label);
+    ~scriptorium_undo.capture(label);
 }, "/scriptorium/undo/capture");
 
 // /scriptorium/undo
 OSCdef(\scriptorium_undo, {
-    ~SCRIPTORIUM_UNDO.undo;
+    ~scriptorium_undo.undo;
 }, "/scriptorium/undo");
 
 // /scriptorium/redo
 OSCdef(\scriptorium_redo, {
-    ~SCRIPTORIUM_UNDO.redo;
+    ~scriptorium_undo.redo;
 }, "/scriptorium/redo");
 
 // /scriptorium/undo/status
 OSCdef(\scriptorium_undo_status, {
-    ~SCRIPTORIUM_UNDO.status;
+    ~scriptorium_undo.status;
 }, "/scriptorium/undo/status");
 
 // /scriptorium/undo/clear
 OSCdef(\scriptorium_undo_clear, {
-    ~SCRIPTORIUM_UNDO.clear;
+    ~scriptorium_undo.clear;
 }, "/scriptorium/undo/clear");
 
 "--- BRAHMA: SCRIPTORIUM Preset Management Online ---".postln;

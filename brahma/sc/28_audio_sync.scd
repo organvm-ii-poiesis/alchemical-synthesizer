@@ -7,7 +7,7 @@
 // ==========================================
 // CLOCK SYNC MANAGER
 // ==========================================
-~SCRIPTORIUM_SYNC = (
+~scriptorium_sync = (
     midiClockOut: nil,
     midiClockRunning: false,
     clockRoutine: nil,
@@ -80,8 +80,8 @@
                     if(self[\clockTickCount] >= 24) {
                         var interval = now - self[\lastClockTick];
                         var bpm = (60 / interval).clip(20, 300).round(0.1);
-                        if(~CHRONOS.notNil) {
-                            ~CHRONOS[\tempo] = bpm;
+                        if(~chronos.notNil) {
+                            ~chronos[\tempo] = bpm;
                         };
                         self[\clockTickCount] = 0;
                         self[\lastClockTick] = now;
@@ -177,7 +177,7 @@
             bpm = bpm.clip(20, 300).round(0.1);
 
             // Update Chronos if available
-            if(~CHRONOS.notNil) { ~CHRONOS[\tempo] = bpm };
+            if(~chronos.notNil) { ~chronos[\tempo] = bpm };
 
             // Update Link if active
             if(self[\linkClock].notNil) {
@@ -208,8 +208,8 @@
             "  Link peers: %".format(self[\linkClock].numPeers).postln;
             "  Link BPM: %".format(self[\linkClock].tempo * 60).postln;
         };
-        if(~CHRONOS.notNil) {
-            "  Chronos tempo: % BPM".format(~CHRONOS[\tempo]).postln;
+        if(~chronos.notNil) {
+            "  Chronos tempo: % BPM".format(~chronos[\tempo]).postln;
         };
     }
 );
@@ -225,7 +225,7 @@ OSCdef(\scriptorium_sync_midi_send_start, { |msg|
     if(MIDIClient.initialized.not) { MIDIClient.init };
     if(MIDIClient.destinations.size > 0) {
         var midiOut = MIDIOut(0, MIDIClient.destinations[0].uid);
-        ~SCRIPTORIUM_SYNC.startMIDIClockSend(midiOut, bpm);
+        ~scriptorium_sync.startMIDIClockSend(midiOut, bpm);
     } {
         "SCRIPTORIUM SYNC: No MIDI destinations available".warn;
     };
@@ -233,49 +233,49 @@ OSCdef(\scriptorium_sync_midi_send_start, { |msg|
 
 // /scriptorium/sync/midiClock/stopSend
 OSCdef(\scriptorium_sync_midi_send_stop, {
-    ~SCRIPTORIUM_SYNC.stopMIDIClockSend;
+    ~scriptorium_sync.stopMIDIClockSend;
 }, "/scriptorium/sync/midiClock/stopSend");
 
 // /scriptorium/sync/midiClock/startReceive
 OSCdef(\scriptorium_sync_midi_recv_start, {
     if(MIDIClient.initialized.not) { MIDIClient.init };
-    ~SCRIPTORIUM_SYNC.startMIDIClockReceive;
+    ~scriptorium_sync.startMIDIClockReceive;
 }, "/scriptorium/sync/midiClock/startReceive");
 
 // /scriptorium/sync/midiClock/stopReceive
 OSCdef(\scriptorium_sync_midi_recv_stop, {
-    ~SCRIPTORIUM_SYNC.stopMIDIClockReceive;
+    ~scriptorium_sync.stopMIDIClockReceive;
 }, "/scriptorium/sync/midiClock/stopReceive");
 
 // /scriptorium/sync/link/start [bpm:float]
 OSCdef(\scriptorium_sync_link_start, { |msg|
     var bpm = msg[1] !? _.asFloat ?? 120;
-    ~SCRIPTORIUM_SYNC.startLink(bpm);
+    ~scriptorium_sync.startLink(bpm);
 }, "/scriptorium/sync/link/start");
 
 // /scriptorium/sync/link/stop
 OSCdef(\scriptorium_sync_link_stop, {
-    ~SCRIPTORIUM_SYNC.stopLink;
+    ~scriptorium_sync.stopLink;
 }, "/scriptorium/sync/link/stop");
 
 // /scriptorium/sync/link/bpm <bpm:float>
 OSCdef(\scriptorium_sync_link_bpm, { |msg|
-    ~SCRIPTORIUM_SYNC.setLinkBPM(msg[1].asFloat);
+    ~scriptorium_sync.setLinkBPM(msg[1].asFloat);
 }, "/scriptorium/sync/link/bpm");
 
 // /scriptorium/sync/tap
 OSCdef(\scriptorium_sync_tap, {
-    ~SCRIPTORIUM_SYNC.tap;
+    ~scriptorium_sync.tap;
 }, "/scriptorium/sync/tap");
 
 // /scriptorium/sync/tap/reset
 OSCdef(\scriptorium_sync_tap_reset, {
-    ~SCRIPTORIUM_SYNC.resetTap;
+    ~scriptorium_sync.resetTap;
 }, "/scriptorium/sync/tap/reset");
 
 // /scriptorium/sync/status
 OSCdef(\scriptorium_sync_status, {
-    ~SCRIPTORIUM_SYNC.status;
+    ~scriptorium_sync.status;
 }, "/scriptorium/sync/status");
 
 "--- BRAHMA: SCRIPTORIUM Sync Online ---".postln;

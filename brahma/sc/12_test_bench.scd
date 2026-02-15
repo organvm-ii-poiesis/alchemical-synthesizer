@@ -4,7 +4,7 @@
 */
 
 (
-~TEST_BENCH = (
+~test_bench = (
 
     // Compare two SynthDefs side-by-side
     runComparison: { |self, defA, defB, inputBus, duration=5|
@@ -15,13 +15,13 @@
 
             // 1. Run Version A
             "Running Version A...".postln;
-            x = Synth(defA, [\inBus, inputBus, \outBus, ~SC_BUS.mainOut]); // Route to main for monitoring
+            x = Synth(defA, [\inBus, inputBus, \outBus, ~sc_bus.mainOut]); // Route to main for monitoring
             duration.wait;
             x.free;
 
             // 2. Run Version B
             "Running Version B...".postln;
-            y = Synth(defB, [\inBus, inputBus, \outBus, ~SC_BUS.mainOut]);
+            y = Synth(defB, [\inBus, inputBus, \outBus, ~sc_bus.mainOut]);
             duration.wait;
             y.free;
 
@@ -63,16 +63,16 @@
         {
             // Set up a basic 4-on-floor pattern on track 0
             [0, 4, 8, 12].do({ |step|
-                ~GOLEM_SEQ.tracks[0][\pattern][step][\active] = true;
+                ~golem_seq.tracks[0][\pattern][step][\active] = true;
             });
 
-            ~GOLEM_SEQ.setTempo(120);
-            ~GOLEM_SEQ.play;
+            ~golem_seq.setTempo(120);
+            ~golem_seq.play;
 
             // Let it run for 4 bars (64 steps at 120bpm = 8 seconds)
             8.wait;
 
-            ~GOLEM_SEQ.stop;
+            ~golem_seq.stop;
             "  Sequencer test complete (4 bars at 120 BPM).".postln;
         }.fork;
     },
@@ -83,12 +83,12 @@
             var result1, result2;
 
             // First absorption should succeed
-            ~GOLEM.evict;
-            result1 = ~GOLEM.absorb(1001);
+            ~golem.evict;
+            result1 = ~golem.absorb(1001);
             "  First absorb (should succeed): %".format(result1).postln;
 
             // Second absorption while equipped should fail
-            result2 = ~GOLEM.absorb(1002);
+            result2 = ~golem.absorb(1002);
             "  Second absorb while equipped (should fail): %".format(result2).postln;
 
             if(result1 == true and: { result2 == false }) {
@@ -98,7 +98,7 @@
             };
 
             // Clean up
-            ~GOLEM.evict;
+            ~golem.evict;
         }.fork;
     },
 

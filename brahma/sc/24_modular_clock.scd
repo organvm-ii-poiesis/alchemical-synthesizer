@@ -121,7 +121,7 @@ SynthDef(\horologium_delay, {
 // ==========================================
 // TAP TEMPO (language-side, averages last N taps)
 // ==========================================
-~HOROLOGIUM_TAP = (
+~horologium_tap = (
     taps: List.new,
     maxTaps: 4,
 
@@ -131,11 +131,12 @@ SynthDef(\horologium_delay, {
             self[\taps].removeAt(0);
         };
         if(self[\taps].size >= 2) {
-            var intervals = (self[\taps].size - 1).collect({ |i|
+            var intervals, avgInterval, bpm;
+            intervals = (self[\taps].size - 1).collect({ |i|
                 self[\taps][i+1] - self[\taps][i];
             });
-            var avgInterval = intervals.mean;
-            var bpm = (60 / avgInterval).clip(20, 300);
+            avgInterval = intervals.mean;
+            bpm = (60 / avgInterval).clip(20, 300);
             bpm;
         } {
             nil;
@@ -150,7 +151,7 @@ SynthDef(\horologium_delay, {
 // ==========================================
 // ABLETON LINK INTEGRATION
 // ==========================================
-~HOROLOGIUM_LINK = (
+~horologium_link = (
     active: false,
 
     start: { |self, bpm=120|
@@ -180,23 +181,23 @@ SynthDef(\horologium_delay, {
 
 // OSC responders
 OSCdef(\horologium_tap, { |msg|
-    var bpm = ~HOROLOGIUM_TAP.tap;
+    var bpm = ~horologium_tap.tap;
     if(bpm.notNil) {
         "HOROLOGIUM: Tap tempo = % BPM".format(bpm.round(0.1)).postln;
         // Optionally sync to Chronos
-        if(~CHRONOS.notNil) {
-            ~CHRONOS[\bpm] = bpm;
+        if(~chronos.notNil) {
+            ~chronos[\bpm] = bpm;
         };
     };
 }, "/horologium/tap");
 
 OSCdef(\horologium_link_start, { |msg|
     var bpm = msg[1] ? 120;
-    ~HOROLOGIUM_LINK.start(bpm);
+    ~horologium_link.start(bpm);
 }, "/horologium/link/start");
 
 OSCdef(\horologium_link_stop, {
-    ~HOROLOGIUM_LINK.stop;
+    ~horologium_link.stop;
 }, "/horologium/link/stop");
 
 "--- BRAHMA: HOROLOGIUM Clock Modules Online (7 modules) ---".postln;
@@ -225,7 +226,7 @@ OSCdef(\horologium_link_stop, {
     var synthName = moduleSpec[0];
     var params = moduleSpec[1];
     params.do({ |p|
-        ~PATCH_BAY.registerDestination(
+        ~patch_bay.registerDestination(
             (synthName.asString ++ "_" ++ p[0].asString).asSymbol,
             p[0], synthName.asString ++ " " ++ p[1]
         );
@@ -233,56 +234,56 @@ OSCdef(\horologium_link_stop, {
 });
 
 // --- MODULE REGISTRY REGISTRATION ---
-if(~MODULE_REGISTRY.notNil) {
+if(~module_registry.notNil) {
     // 1. Master Clock — BPM-driven pulse generator
-    ~MODULE_REGISTRY.register(\horologium_master, \modular, \horologium_master, [
+    ~module_registry.register(\horologium_master, \modular, \horologium_master, [
         (\name: \bpm, \default: 120, \min: 20, \max: 300, \units: "BPM", \desc: "Tempo"),
         (\name: \run, \default: 1, \min: 0, \max: 1, \units: "", \desc: "Run/stop"),
         (\name: \swing, \default: 0, \min: 0, \max: 1, \units: "", \desc: "Swing enable"),
         (\name: \swingAmount, \default: 0.5, \min: 0, \max: 1, \units: "", \desc: "Swing amount")
-    ], ~SC_GRP[\te], "BPM-driven master clock with swing");
+    ], ~sc_grp[\te], "BPM-driven master clock with swing");
 
     // 2. Clock Divider — input clock to slower outputs
-    ~MODULE_REGISTRY.register(\horologium_divider, \modular, \horologium_divider, [
+    ~module_registry.register(\horologium_divider, \modular, \horologium_divider, [
         (\name: \inBus, \default: 0, \min: 0, \max: 2048, \units: "bus", \desc: "Clock input bus")
-    ], ~SC_GRP[\te], "Clock divider with /2 /3 /4 /5 /6 /7 /8 /16 /32 outputs");
+    ], ~sc_grp[\te], "Clock divider with /2 /3 /4 /5 /6 /7 /8 /16 /32 outputs");
 
     // 3. Clock Multiplier — input clock to faster outputs
-    ~MODULE_REGISTRY.register(\horologium_multiplier, \modular, \horologium_multiplier, [
+    ~module_registry.register(\horologium_multiplier, \modular, \horologium_multiplier, [
         (\name: \inBus, \default: 0, \min: 0, \max: 2048, \units: "bus", \desc: "Clock input bus"),
         (\name: \multiply, \default: 2, \min: 1, \max: 8, \units: "x", \desc: "Multiplication factor")
-    ], ~SC_GRP[\te], "Clock multiplier: x1 to x8 rate multiplication");
+    ], ~sc_grp[\te], "Clock multiplier: x1 to x8 rate multiplication");
 
     // 4. Swing Processor — applies swing to incoming clock
-    ~MODULE_REGISTRY.register(\horologium_swing, \modular, \horologium_swing, [
+    ~module_registry.register(\horologium_swing, \modular, \horologium_swing, [
         (\name: \inBus, \default: 0, \min: 0, \max: 2048, \units: "bus", \desc: "Clock input bus"),
         (\name: \amount, \default: 0.5, \min: 0.5, \max: 0.75, \units: "", \desc: "Swing amount (0.5=straight, 0.66=triplet)")
-    ], ~SC_GRP[\te], "Swing processor: delays even beats by swing amount");
+    ], ~sc_grp[\te], "Swing processor: delays even beats by swing amount");
 
     // 5. Burst Generator — N pulses at rate on single trigger
-    ~MODULE_REGISTRY.register(\horologium_burst, \modular, \horologium_burst, [
+    ~module_registry.register(\horologium_burst, \modular, \horologium_burst, [
         (\name: \inBus, \default: 0, \min: 0, \max: 2048, \units: "bus", \desc: "Trigger input bus"),
         (\name: \count, \default: 4, \min: 1, \max: 32, \units: "", \desc: "Number of burst pulses"),
         (\name: \rate, \default: 10, \min: 1, \max: 100, \units: "Hz", \desc: "Burst pulse rate"),
         (\name: \acceleration, \default: 0, \min: -5, \max: 5, \units: "", \desc: "Rate acceleration per pulse")
-    ], ~SC_GRP[\te], "Burst generator: N pulses at configurable rate with acceleration");
+    ], ~sc_grp[\te], "Burst generator: N pulses at configurable rate with acceleration");
 
     // 6. Clock Delay — shift clock by ms or % of beat
-    ~MODULE_REGISTRY.register(\horologium_delay, \modular, \horologium_delay, [
+    ~module_registry.register(\horologium_delay, \modular, \horologium_delay, [
         (\name: \inBus, \default: 0, \min: 0, \max: 2048, \units: "bus", \desc: "Clock input bus"),
         (\name: \delayMs, \default: 0, \min: 0, \max: 500, \units: "ms", \desc: "Fixed delay in milliseconds"),
         (\name: \delayPercent, \default: 0, \min: 0, \max: 0.99, \units: "", \desc: "Delay as percentage of beat period")
-    ], ~SC_GRP[\te], "Clock delay: shift by fixed ms or beat-relative percentage");
+    ], ~sc_grp[\te], "Clock delay: shift by fixed ms or beat-relative percentage");
 
     // 7. Tap Tempo — language-side tap tempo averaging
-    ~MODULE_REGISTRY.register(\HOROLOGIUM_TAP, \modular, \HOROLOGIUM_TAP, [
+    ~module_registry.register(\HOROLOGIUM_TAP, \modular, \HOROLOGIUM_TAP, [
         (\name: \maxTaps, \default: 4, \min: 2, \max: 16, \units: "", \desc: "Number of taps to average")
-    ], ~SC_GRP[\te], "Tap tempo with configurable averaging window");
+    ], ~sc_grp[\te], "Tap tempo with configurable averaging window");
 
     // 8. Ableton Link — Link clock integration
-    ~MODULE_REGISTRY.register(\HOROLOGIUM_LINK, \modular, \HOROLOGIUM_LINK, [
+    ~module_registry.register(\HOROLOGIUM_LINK, \modular, \HOROLOGIUM_LINK, [
         (\name: \bpm, \default: 120, \min: 20, \max: 300, \units: "BPM", \desc: "Link tempo")
-    ], ~SC_GRP[\te], "Ableton Link integration for network tempo sync");
+    ], ~sc_grp[\te], "Ableton Link integration for network tempo sync");
 
     "  MODULE_REGISTRY: 8 Horologium clock modules registered".postln;
 };

@@ -39,7 +39,7 @@ AdamKadmon {
     }
     
     *checkPermission { |srcId, dstId, mode|
-        // mode: ead, \write, \infect
+        // mode: read, write, infect
         // Simple mock permission logic
         // In full implementation, this would check the Registry contracts
         ^true;

@@ -4,7 +4,7 @@
 */
 
 (
-~GOLEM_PATTERNS = (
+~golem_patterns = (
 
     // ==========================================
     // FACTORY ENGINE PRESETS

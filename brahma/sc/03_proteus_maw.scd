@@ -61,7 +61,8 @@ SynthDef(\proteus_render, {
     // Fidelity Degradation (Bitcrush/SampleRate if fidelity < 1)
     sig = Select.ar(fidelity < 0.99, [
         sig,
-        Decimator.ar(sig, 44100 * fidelity, 24 * fidelity)
+        // Decimator fallback: sample rate reduction + bit depth reduction
+        Latch.ar(sig, Impulse.ar(44100 * fidelity)) .round(2.pow(24 * fidelity).reciprocal)
     ]);
     
     Out.ar(outBus, sig);

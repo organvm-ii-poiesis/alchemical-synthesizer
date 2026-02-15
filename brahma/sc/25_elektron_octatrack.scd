@@ -185,7 +185,7 @@ SynthDef(\octahedron_cue, {
 // ==========================================
 // Octatrack-style arranger: chains of patterns with repeat counts
 // and conditional logic for live arrangement.
-~OCTAHEDRON_ARRANGER = (
+~octahedron_arranger = (
     chains: List.new,      // Each: (pattern: idx, repeats: N, condition: \always)
     currentChain: 0,
     currentRepeat: 0,
@@ -313,30 +313,30 @@ OSCdef(\octahedron_xfade, { |msg|
     var xfade = msg[1].asFloat;
     var curve = msg[2] !? _.asInteger ?? 0;
     // Set on any running crossfader synths via named node or group
-    ~OCTAHEDRON_NODES !? { |nodes|
+    ~octahedron_nodes !? { |nodes|
         nodes[\crossfader] !? { |syn|
             syn.set(\xfade, xfade.clip(0, 1), \curve, curve.clip(0, 1));
         };
     };
-    ~VISUAL_CORTEX.target.sendMsg("/octahedron/crossfade/state", xfade, curve);
+    ~visual_cortex.target.sendMsg("/octahedron/crossfade/state", xfade, curve);
 }, "/octahedron/crossfade");
 
 // Pickup machine record control: /octahedron/record <record:int> <overdub:int>
 OSCdef(\octahedron_record, { |msg|
     var record = msg[1].asInteger;
     var overdub = msg[2] !? _.asInteger ?? 0;
-    ~OCTAHEDRON_NODES !? { |nodes|
+    ~octahedron_nodes !? { |nodes|
         nodes[\pickup] !? { |syn|
             syn.set(\record, record, \overdub, overdub);
         };
     };
-    ~VISUAL_CORTEX.target.sendMsg("/octahedron/record/state", record, overdub);
+    ~visual_cortex.target.sendMsg("/octahedron/record/state", record, overdub);
 }, "/octahedron/record");
 
 // Pickup feedback: /octahedron/pickup/feedback <feedback:float>
 OSCdef(\octahedron_pickup_fb, { |msg|
     var fb = msg[1].asFloat;
-    ~OCTAHEDRON_NODES !? { |nodes|
+    ~octahedron_nodes !? { |nodes|
         nodes[\pickup] !? { |syn|
             syn.set(\feedback, fb.clip(0, 1));
         };
@@ -348,7 +348,7 @@ OSCdef(\octahedron_slice, { |msg|
     var idx = msg[1].asInteger;
     var rate = msg[2] !? _.asFloat ?? 1.0;
     // Trigger a one-shot slice playback
-    ~OCTAHEDRON_NODES !? { |nodes|
+    ~octahedron_nodes !? { |nodes|
         if(nodes[\sliceBuf].notNil) {
             Synth(\octahedron_slicer, [
                 \outBus, nodes[\mainBus] ? 0,
@@ -357,22 +357,22 @@ OSCdef(\octahedron_slice, { |msg|
                 \numSlices, nodes[\numSlices] ? 16,
                 \rate, rate.clip(-4, 4),
                 \gate, 1
-            ], target: ~SC_GRP[\te]);
+            ], target: ~sc_grp[\te]);
         };
     };
-    ~VISUAL_CORTEX.target.sendMsg("/octahedron/slice/state", idx, rate);
+    ~visual_cortex.target.sendMsg("/octahedron/slice/state", idx, rate);
 }, "/octahedron/slice");
 
 // Cue level: /octahedron/cue <cueLevel:float> <mainLevel:float>
 OSCdef(\octahedron_cue_level, { |msg|
     var cueLevel = msg[1].asFloat;
     var mainLevel = msg[2] !? _.asFloat ?? 1.0;
-    ~OCTAHEDRON_NODES !? { |nodes|
+    ~octahedron_nodes !? { |nodes|
         nodes[\cue] !? { |syn|
             syn.set(\cueLevel, cueLevel.clip(0, 2), \mainLevel, mainLevel.clip(0, 2));
         };
     };
-    ~VISUAL_CORTEX.target.sendMsg("/octahedron/cue/state", cueLevel, mainLevel);
+    ~visual_cortex.target.sendMsg("/octahedron/cue/state", cueLevel, mainLevel);
 }, "/octahedron/cue");
 
 // Time stretch params: /octahedron/stretch <rate:float> <pitch:float> <grainSize:float>
@@ -380,12 +380,12 @@ OSCdef(\octahedron_stretch, { |msg|
     var rate = msg[1].asFloat;
     var pitch = msg[2] !? _.asFloat ?? 1.0;
     var grainSize = msg[3] !? _.asFloat ?? 0.1;
-    ~OCTAHEDRON_NODES !? { |nodes|
+    ~octahedron_nodes !? { |nodes|
         nodes[\stretch] !? { |syn|
             syn.set(\rate, rate.clip(0.01, 4), \pitch, pitch.clip(0.25, 4), \grainSize, grainSize.clip(0.01, 1));
         };
     };
-    ~VISUAL_CORTEX.target.sendMsg("/octahedron/stretch/state", rate, pitch, grainSize);
+    ~visual_cortex.target.sendMsg("/octahedron/stretch/state", rate, pitch, grainSize);
 }, "/octahedron/stretch");
 
 // Arranger: /octahedron/arranger/add <pattern:int> <repeats:int> <condition:string>
@@ -393,41 +393,41 @@ OSCdef(\octahedron_arr_add, { |msg|
     var pattern = msg[1].asInteger;
     var repeats = msg[2] !? _.asInteger ?? 1;
     var condition = msg[3] !? _.asSymbol ?? \always;
-    ~OCTAHEDRON_ARRANGER.addChain(pattern, repeats, condition);
+    ~octahedron_arranger.addChain(pattern, repeats, condition);
 }, "/octahedron/arranger/add");
 
 // Arranger start: /octahedron/arranger/start
 OSCdef(\octahedron_arr_start, {
-    ~OCTAHEDRON_ARRANGER.start;
+    ~octahedron_arranger.start;
 }, "/octahedron/arranger/start");
 
 // Arranger stop: /octahedron/arranger/stop
 OSCdef(\octahedron_arr_stop, {
-    ~OCTAHEDRON_ARRANGER.stop;
+    ~octahedron_arranger.stop;
 }, "/octahedron/arranger/stop");
 
 // Arranger reset: /octahedron/arranger/reset
 OSCdef(\octahedron_arr_reset, {
-    ~OCTAHEDRON_ARRANGER.reset;
+    ~octahedron_arranger.reset;
 }, "/octahedron/arranger/reset");
 
 // Arranger clear: /octahedron/arranger/clear
 OSCdef(\octahedron_arr_clear, {
-    ~OCTAHEDRON_ARRANGER.clear;
+    ~octahedron_arranger.clear;
 }, "/octahedron/arranger/clear");
 
 // Arranger advance (manual): /octahedron/arranger/advance
 OSCdef(\octahedron_arr_advance, {
-    var pat = ~OCTAHEDRON_ARRANGER.advance;
+    var pat = ~octahedron_arranger.advance;
     if(pat.notNil) {
-        ~VISUAL_CORTEX.target.sendMsg("/octahedron/arranger/pattern", pat);
+        ~visual_cortex.target.sendMsg("/octahedron/arranger/pattern", pat);
     };
 }, "/octahedron/arranger/advance");
 
 // ==========================================
 // Node holder for live instances
 // ==========================================
-~OCTAHEDRON_NODES = (
+~octahedron_nodes = (
     crossfader: nil,
     pickup: nil,
     stretch: nil,
@@ -465,7 +465,7 @@ OSCdef(\octahedron_arr_advance, {
     var synthName = moduleSpec[0];
     var params = moduleSpec[1];
     params.do({ |p|
-        ~PATCH_BAY.registerDestination(
+        ~patch_bay.registerDestination(
             (synthName.asString ++ "_" ++ p[0].asString).asSymbol,
             p[0], synthName.asString ++ " " ++ p[1]
         );
@@ -473,17 +473,17 @@ OSCdef(\octahedron_arr_advance, {
 });
 
 // --- MODULE REGISTRY REGISTRATION ---
-if(~MODULE_REGISTRY.notNil) {
+if(~module_registry.notNil) {
     // OCTAHEDRON CROSSFADER — Scene A/B blending
-    ~MODULE_REGISTRY.register(\octahedron_crossfader, \elektron, \octahedron_crossfader, [
+    ~module_registry.register(\octahedron_crossfader, \elektron, \octahedron_crossfader, [
         (\name: \inBusA, \default: 0, \min: 0, \max: 4096, \units: "", \desc: "Scene A input bus"),
         (\name: \inBusB, \default: 0, \min: 0, \max: 4096, \units: "", \desc: "Scene B input bus"),
         (\name: \xfade, \default: 0.5, \min: 0, \max: 1, \units: "", \desc: "Crossfade position (0=A, 1=B)"),
         (\name: \curve, \default: 0, \min: 0, \max: 1, \units: "", \desc: "Crossfade curve (0=equal power, 1=linear)"),
-    ], ~SC_GRP[\te], "Scene A/B crossfader with equal-power and linear curves");
+    ], ~sc_grp[\te], "Scene A/B crossfader with equal-power and linear curves");
 
     // OCTAHEDRON PICKUP — Live loop recorder/overdub
-    ~MODULE_REGISTRY.register(\octahedron_pickup, \elektron, \octahedron_pickup, [
+    ~module_registry.register(\octahedron_pickup, \elektron, \octahedron_pickup, [
         (\name: \inBus, \default: 0, \min: 0, \max: 4096, \units: "", \desc: "Audio input bus"),
         (\name: \bufnum, \default: 0, \min: 0, \max: 4096, \units: "", \desc: "Recording buffer number"),
         (\name: \record, \default: 0, \min: 0, \max: 1, \units: "", \desc: "Record toggle (>0.5 = armed)"),
@@ -491,34 +491,34 @@ if(~MODULE_REGISTRY.notNil) {
         (\name: \multiply, \default: 0, \min: 0, \max: 1, \units: "", \desc: "Multiply mode"),
         (\name: \level, \default: 1.0, \min: 0, \max: 2, \units: "", \desc: "Playback level"),
         (\name: \feedback, \default: 0.8, \min: 0, \max: 1, \units: "", \desc: "Overdub feedback (content preservation)"),
-    ], ~SC_GRP[\te], "Live loop recorder with overdub and feedback control");
+    ], ~sc_grp[\te], "Live loop recorder with overdub and feedback control");
 
     // OCTAHEDRON TIMESTRETCH — Granular phase vocoder
-    ~MODULE_REGISTRY.register(\octahedron_timestretch, \elektron, \octahedron_timestretch, [
+    ~module_registry.register(\octahedron_timestretch, \elektron, \octahedron_timestretch, [
         (\name: \inBus, \default: 0, \min: 0, \max: 4096, \units: "", \desc: "Audio input bus"),
         (\name: \bufnum, \default: 0, \min: 0, \max: 4096, \units: "", \desc: "Source buffer number"),
         (\name: \rate, \default: 1.0, \min: 0.01, \max: 4.0, \units: "x", \desc: "Time stretch rate"),
         (\name: \pitch, \default: 1.0, \min: 0.25, \max: 4.0, \units: "x", \desc: "Pitch shift ratio"),
         (\name: \grainSize, \default: 0.1, \min: 0.01, \max: 1.0, \units: "s", \desc: "Grain duration"),
         (\name: \overlap, \default: 4, \min: 1, \max: 16, \units: "", \desc: "Grain overlap factor"),
-    ], ~SC_GRP[\te], "Granular time stretch with independent rate and pitch control");
+    ], ~sc_grp[\te], "Granular time stretch with independent rate and pitch control");
 
     // OCTAHEDRON SLICER — Sample slice playback
-    ~MODULE_REGISTRY.register(\octahedron_slicer, \elektron, \octahedron_slicer, [
+    ~module_registry.register(\octahedron_slicer, \elektron, \octahedron_slicer, [
         (\name: \bufnum, \default: 0, \min: 0, \max: 4096, \units: "", \desc: "Source buffer number"),
         (\name: \sliceIndex, \default: 0, \min: 0, \max: 127, \units: "", \desc: "Slice index"),
         (\name: \numSlices, \default: 16, \min: 1, \max: 128, \units: "", \desc: "Total number of slices"),
         (\name: \rate, \default: 1.0, \min: -4, \max: 4, \units: "x", \desc: "Playback rate"),
         (\name: \startPos, \default: 0, \min: 0, \max: 1, \units: "", \desc: "Start position (normalized, if sliceIndex=0)"),
-    ], ~SC_GRP[\te], "Sample slicer with indexed slice playback");
+    ], ~sc_grp[\te], "Sample slicer with indexed slice playback");
 
     // OCTAHEDRON CUE — Dual-destination router
-    ~MODULE_REGISTRY.register(\octahedron_cue, \elektron, \octahedron_cue, [
+    ~module_registry.register(\octahedron_cue, \elektron, \octahedron_cue, [
         (\name: \inBus, \default: 0, \min: 0, \max: 4096, \units: "", \desc: "Stereo input bus"),
         (\name: \cueBus, \default: 0, \min: 0, \max: 4096, \units: "", \desc: "Cue/headphone output bus"),
         (\name: \mainBus, \default: 0, \min: 0, \max: 4096, \units: "", \desc: "Main output bus"),
         (\name: \cueLevel, \default: 1.0, \min: 0, \max: 2, \units: "", \desc: "Cue output level"),
         (\name: \mainLevel, \default: 1.0, \min: 0, \max: 2, \units: "", \desc: "Main output level"),
-    ], ~SC_GRP[\te], "DJ-style dual-destination cue/main router");
+    ], ~sc_grp[\te], "DJ-style dual-destination cue/main router");
 };
 )

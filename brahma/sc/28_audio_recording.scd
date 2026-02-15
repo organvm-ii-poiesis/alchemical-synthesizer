@@ -51,7 +51,7 @@ SynthDef(\scriptorium_recorder_mono, {
 // ==========================================
 // MULTI-TRACK RECORDER
 // ==========================================
-~SCRIPTORIUM_RECORDER = (
+~scriptorium_recorder = (
     tracks: IdentityDictionary.new,
     outputDir: Platform.recordingsDir,
     maxDuration: 300, // 5 minutes default max
@@ -230,40 +230,40 @@ OSCdef(\scriptorium_rec_arm, { |msg|
     var name = msg[1].asString;
     var inBus = msg[2].asInteger;
     var numCh = msg[3] !? _.asInteger ?? 2;
-    ~SCRIPTORIUM_RECORDER.armTrack(name, inBus, numCh);
+    ~scriptorium_recorder.armTrack(name, inBus, numCh);
 }, "/scriptorium/record/arm");
 
 // /scriptorium/record/start <name:string>
 OSCdef(\scriptorium_rec_start, { |msg|
-    ~SCRIPTORIUM_RECORDER.startRecording(msg[1].asString);
+    ~scriptorium_recorder.startRecording(msg[1].asString);
 }, "/scriptorium/record/start");
 
 // /scriptorium/record/stop <name:string>
 OSCdef(\scriptorium_rec_stop, { |msg|
-    ~SCRIPTORIUM_RECORDER.stopRecording(msg[1].asString);
+    ~scriptorium_recorder.stopRecording(msg[1].asString);
 }, "/scriptorium/record/stop");
 
 // /scriptorium/record/write <name:string> [filename:string]
 OSCdef(\scriptorium_rec_write, { |msg|
     var name = msg[1].asString;
     var filename = msg[2] !? _.asString;
-    ~SCRIPTORIUM_RECORDER.writeTrack(name, filename);
+    ~scriptorium_recorder.writeTrack(name, filename);
 }, "/scriptorium/record/write");
 
 // /scriptorium/record/startAll
 OSCdef(\scriptorium_rec_start_all, {
-    ~SCRIPTORIUM_RECORDER.startAll;
+    ~scriptorium_recorder.startAll;
 }, "/scriptorium/record/startAll");
 
 // /scriptorium/record/stopAll
 OSCdef(\scriptorium_rec_stop_all, {
-    ~SCRIPTORIUM_RECORDER.stopAll;
+    ~scriptorium_recorder.stopAll;
 }, "/scriptorium/record/stopAll");
 
 // /scriptorium/record/writeAll [prefix:string]
 OSCdef(\scriptorium_rec_write_all, { |msg|
     var prefix = msg[1] !? _.asString;
-    ~SCRIPTORIUM_RECORDER.writeAll(prefix);
+    ~scriptorium_recorder.writeAll(prefix);
 }, "/scriptorium/record/writeAll");
 
 // /scriptorium/record/punchIn <name:string> [recLevel:float] [preLevel:float]
@@ -271,12 +271,12 @@ OSCdef(\scriptorium_rec_punch_in, { |msg|
     var name = msg[1].asString;
     var recLevel = msg[2] !? _.asFloat ?? 1.0;
     var preLevel = msg[3] !? _.asFloat ?? 0.5;
-    ~SCRIPTORIUM_RECORDER.punchIn(name, recLevel, preLevel);
+    ~scriptorium_recorder.punchIn(name, recLevel, preLevel);
 }, "/scriptorium/record/punchIn");
 
 // /scriptorium/record/punchOut <name:string>
 OSCdef(\scriptorium_rec_punch_out, { |msg|
-    ~SCRIPTORIUM_RECORDER.punchOut(msg[1].asString);
+    ~scriptorium_recorder.punchOut(msg[1].asString);
 }, "/scriptorium/record/punchOut");
 
 // /scriptorium/record/bounce <name:string> <duration:float> [filename:string]
@@ -284,17 +284,17 @@ OSCdef(\scriptorium_rec_bounce, { |msg|
     var name = msg[1].asString;
     var duration = msg[2] !? _.asFloat ?? 10;
     var filename = msg[3] !? _.asString;
-    ~SCRIPTORIUM_RECORDER.bounceTrack(name, duration, filename);
+    ~scriptorium_recorder.bounceTrack(name, duration, filename);
 }, "/scriptorium/record/bounce");
 
 // /scriptorium/record/free <name:string>
 OSCdef(\scriptorium_rec_free, { |msg|
-    ~SCRIPTORIUM_RECORDER.freeTrack(msg[1].asString);
+    ~scriptorium_recorder.freeTrack(msg[1].asString);
 }, "/scriptorium/record/free");
 
 // /scriptorium/record/status
 OSCdef(\scriptorium_rec_status, {
-    ~SCRIPTORIUM_RECORDER.status;
+    ~scriptorium_recorder.status;
 }, "/scriptorium/record/status");
 
 "--- BRAHMA: SCRIPTORIUM Recording Online ---".postln;

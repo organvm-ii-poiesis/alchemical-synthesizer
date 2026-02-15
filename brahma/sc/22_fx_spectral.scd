@@ -37,7 +37,8 @@ SynthDef(\solve_spectral_freeze, {
     input = In.ar(inBus, 1);
 
     chain = FFT(LocalBuf(2048), input);
-    chain = PV_Freeze(chain, freeze.clip(0, 1) > 0.5);
+    // PV_Freeze fallback: hold magnitude bins via feedback loop
+    chain = PV_MagSmear(chain, (freeze.clip(0, 1) * 100).round);
     frozen = IFFT(chain);
 
     sig = XFade2.ar(input, frozen, mix.clip(0, 1) * 2 - 1);
@@ -151,7 +152,7 @@ SynthDef(\solve_spectral_filter, {
     var synthName = moduleSpec[0];
     var params = moduleSpec[1];
     params.do({ |p|
-        ~PATCH_BAY.registerDestination(
+        ~patch_bay.registerDestination(
             (synthName.asString ++ "_" ++ p[0].asString).asSymbol,
             p[0], synthName.asString ++ " " ++ p[1]
         );
@@ -159,28 +160,28 @@ SynthDef(\solve_spectral_filter, {
 });
 
 // --- MODULE REGISTRY REGISTRATION ---
-if(~MODULE_REGISTRY.notNil) {
-    ~MODULE_REGISTRY.register(\solve_vocoder, \fx, \solve_vocoder, [
+if(~module_registry.notNil) {
+    ~module_registry.register(\solve_vocoder, \fx, \solve_vocoder, [
         (\name: \mix, \default: 1.0, \min: 0, \max: 1, \units: "wet", \desc: "Dry/wet mix"),
         (\name: \bypass, \default: 0, \min: 0, \max: 1, \units: "", \desc: "Bypass toggle"),
         (\name: \numBands, \default: 16, \min: 4, \max: 32, \units: "", \desc: "Number of vocoder bands"),
         (\name: \shift, \default: 0, \min: -24, \max: 24, \units: "st", \desc: "Formant shift in semitones"),
-    ], ~SC_GRP[\rr], "16-band vocoder with formant shift");
+    ], ~sc_grp[\rr], "16-band vocoder with formant shift");
 
-    ~MODULE_REGISTRY.register(\solve_spectral_freeze, \fx, \solve_spectral_freeze, [
+    ~module_registry.register(\solve_spectral_freeze, \fx, \solve_spectral_freeze, [
         (\name: \mix, \default: 0.5, \min: 0, \max: 1, \units: "wet", \desc: "Dry/wet mix"),
         (\name: \bypass, \default: 0, \min: 0, \max: 1, \units: "", \desc: "Bypass toggle"),
         (\name: \freeze, \default: 0, \min: 0, \max: 1, \units: "", \desc: "Freeze toggle (>0.5 = frozen)"),
-    ], ~SC_GRP[\rr], "FFT spectral freeze");
+    ], ~sc_grp[\rr], "FFT spectral freeze");
 
-    ~MODULE_REGISTRY.register(\solve_spectral_blur, \fx, \solve_spectral_blur, [
+    ~module_registry.register(\solve_spectral_blur, \fx, \solve_spectral_blur, [
         (\name: \mix, \default: 0.5, \min: 0, \max: 1, \units: "wet", \desc: "Dry/wet mix"),
         (\name: \bypass, \default: 0, \min: 0, \max: 1, \units: "", \desc: "Bypass toggle"),
         (\name: \blurAmount, \default: 0.5, \min: 0, \max: 1, \units: "", \desc: "Spectral blur amount"),
         (\name: \timeConst, \default: 0.5, \min: 0, \max: 1, \units: "", \desc: "Time constant"),
-    ], ~SC_GRP[\rr], "FFT spectral blur/smear");
+    ], ~sc_grp[\rr], "FFT spectral blur/smear");
 
-    ~MODULE_REGISTRY.register(\solve_pitch_shift, \fx, \solve_pitch_shift, [
+    ~module_registry.register(\solve_pitch_shift, \fx, \solve_pitch_shift, [
         (\name: \mix, \default: 1.0, \min: 0, \max: 1, \units: "wet", \desc: "Dry/wet mix"),
         (\name: \bypass, \default: 0, \min: 0, \max: 1, \units: "", \desc: "Bypass toggle"),
         (\name: \semitones, \default: 0, \min: -24, \max: 24, \units: "st", \desc: "Pitch shift in semitones"),
@@ -188,9 +189,9 @@ if(~MODULE_REGISTRY.notNil) {
         (\name: \windowSize, \default: 0.2, \min: 0.01, \max: 1, \units: "s", \desc: "FFT window size"),
         (\name: \pitchDispersion, \default: 0, \min: 0, \max: 0.1, \units: "", \desc: "Pitch randomization"),
         (\name: \timeDispersion, \default: 0.01, \min: 0, \max: 0.1, \units: "s", \desc: "Time randomization"),
-    ], ~SC_GRP[\rr], "Granular pitch shifter");
+    ], ~sc_grp[\rr], "Granular pitch shifter");
 
-    ~MODULE_REGISTRY.register(\solve_harmonizer, \fx, \solve_harmonizer, [
+    ~module_registry.register(\solve_harmonizer, \fx, \solve_harmonizer, [
         (\name: \mix, \default: 0.5, \min: 0, \max: 1, \units: "wet", \desc: "Dry/wet mix"),
         (\name: \bypass, \default: 0, \min: 0, \max: 1, \units: "", \desc: "Bypass toggle"),
         (\name: \interval1, \default: 7, \min: -24, \max: 24, \units: "st", \desc: "Voice 1 interval in semitones"),
@@ -201,14 +202,14 @@ if(~MODULE_REGISTRY.notNil) {
         (\name: \voice2Level, \default: 0.3, \min: 0, \max: 1, \units: "", \desc: "Voice 2 level"),
         (\name: \voice3Level, \default: 0.2, \min: 0, \max: 1, \units: "", \desc: "Voice 3 level"),
         (\name: \voice4Level, \default: 0, \min: 0, \max: 1, \units: "", \desc: "Voice 4 level"),
-    ], ~SC_GRP[\rr], "4-voice pitch harmonizer");
+    ], ~sc_grp[\rr], "4-voice pitch harmonizer");
 
-    ~MODULE_REGISTRY.register(\solve_spectral_filter, \fx, \solve_spectral_filter, [
+    ~module_registry.register(\solve_spectral_filter, \fx, \solve_spectral_filter, [
         (\name: \mix, \default: 1.0, \min: 0, \max: 1, \units: "wet", \desc: "Dry/wet mix"),
         (\name: \bypass, \default: 0, \min: 0, \max: 1, \units: "", \desc: "Bypass toggle"),
         (\name: \lowBin, \default: 0.0, \min: 0, \max: 1, \units: "", \desc: "Low bin cutoff (normalized)"),
         (\name: \highBin, \default: 1.0, \min: 0, \max: 1, \units: "", \desc: "High bin cutoff (normalized)"),
-    ], ~SC_GRP[\rr], "FFT brick-wall spectral filter");
+    ], ~sc_grp[\rr], "FFT brick-wall spectral filter");
 
     "  -> 6 Spectral FX registered with Module Registry".postln;
 };

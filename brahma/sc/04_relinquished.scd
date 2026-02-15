@@ -6,7 +6,7 @@
 
 (
 // STAGE-01 INPUT_ASSIMILATION (IA)
-SynthDef(elinquished_ia, {
+SynthDef(\relinquished_ia, {
   |inBusA=0, inBusB=1, outBus=0,
    iaSelect=0,               // 0=A, 1=B
    iaGain=1.0,               // 0..4
@@ -42,7 +42,7 @@ SynthDef(elinquished_ia, {
 
 
 // STAGE-03 BINDING_CORE (BC)
-SynthDef(elinquished_bc, {
+SynthDef(\relinquished_bc, {
   |inBus=0, outBus=0,
    equipState=0,             // 0/1
    equipTrig=0,              // trigger
@@ -88,7 +88,7 @@ SynthDef(elinquished_bc, {
 
 
 // STAGE-04 ANALYSIS_EXTRACTION (AE)
-SynthDef(elinquished_ae, {
+SynthDef(\relinquished_ae, {
   |inBus=0,
    aeRateHz=50.0,            
    aeSmoothMs=40.0,          
@@ -124,7 +124,7 @@ SynthDef(elinquished_ae, {
 
 
 // STAGE-05 TRANSMUTATION_ENGINE (TE)
-SynthDef(elinquished_te, {
+SynthDef(\relinquished_te, {
   |inBus=0, outBus=0,
    cvEnvBus=0, cvToneBus=1, cvNoiseBus=2, gateTransBus=3,
    teDrive=0.35, teColor=0.50, teChaos=0.15, teMix=1.0,
@@ -173,7 +173,7 @@ SynthDef(elinquished_te, {
 
 
 // STAGE-06 PROTECTION_REFLECTION (PR)
-SynthDef(elinquished_pr, {
+SynthDef(\relinquished_pr, {
   |inBus=0, outBus=0, reflectBus=0,
    iaClipBus=0, teSatBus=1,
    cvToneBus=2, cvNoiseBus=3,
@@ -205,21 +205,21 @@ SynthDef(elinquished_pr, {
 
   tone = In.kr(cvToneBus, 1);
 
-  inv = -sum * prReflectMix.clip(0,1);
+  inv = sum.neg * prReflectMix.clip(0,1);
   ring = (sum * SinOsc.ar(200 + tone * 800)) * prReflectMix.clip(0,1);
-  reflect = Select.ar(prMode.clip(0,3), [0, inv, ring, 0]);
+  reflect = Select.ar(prMode.clip(0,3), [DC.ar(0), inv, ring, DC.ar(0)]);
 
-  fault = Latch.kr((prMode.clip(0,3) == 3) * overGate, 1); 
+  fault = Latch.kr(((prMode.clip(0,3) - 3).abs < 0.5) * overGate, 1);
   Out.kr(prFaultBus, fault);
 
-  trig = (prMode.clip(0,3) == 0) * overGate;
+  trig = (prMode.clip(0,3) < 0.5) * overGate;
   Out.kr(prSacrificeTrigBus, trig);
 
   out = Select.ar(prMode.clip(0,3), [
     (sum * (1 - trig)).lag(0.01),
     Limiter.ar(sum, 0.98, 0.02),
     Limiter.ar(sum, 0.98, 0.02),
-    Select.ar(fault, [Limiter.ar(sum, 0.98, 0.02), 0])
+    Select.ar(fault, [Limiter.ar(sum, 0.98, 0.02), DC.ar(0)])
   ]);
 
   Out.ar(reflectBus, reflect);
@@ -227,7 +227,7 @@ SynthDef(elinquished_pr, {
 }).add;
 
 // STAGE-07 RELEASE_ROUTER (RR)
-SynthDef(elinquished_rr, {
+SynthDef(\relinquished_rr, {
   |iaBus=0, prBus=1, outBus=0,
    rrBypass=0,               
    rrLevelDb=0.0             

@@ -5,7 +5,7 @@
 */
 
 (
-~CHRONOS_MIDI = (
+~chronos_midi = (
 
     // MIDI output routing per track
     // trackMidiOut: Dictionary trackIdx -> (channel, port)
@@ -49,7 +49,7 @@
             var note = stepData[\note] + stepData[\transpose];
             var vel = stepData[\velocity];
             var durTicks = stepData[\length];
-            var durSec = durTicks * 60 / ~CHRONOS[\tempo] / 96;
+            var durSec = durTicks * 60 / ~chronos[\tempo] / 96;
 
             self[\midiOut].noteOn(ch, note.clip(0, 127), vel.clip(0, 127));
 
@@ -66,7 +66,7 @@
     // ==========================================
     // Sync Chronos tempo to external MIDI clock
     syncToExternalClock: { |self|
-        ~BRAHMA_MIDI[\externalSync] = true;
+        ~brahma_midi[\externalSync] = true;
         "CHRONOS MIDI: Syncing to external MIDI clock".postln;
     },
 
@@ -77,10 +77,10 @@
             self[\clockSendRoutine] = Routine({
                 loop {
                     self[\midiOut].midiClock;
-                    (60 / ~CHRONOS[\tempo] / 24).wait; // 24 PPQN
+                    (60 / ~chronos[\tempo] / 24).wait; // 24 PPQN
                 };
             }).play;
-            "CHRONOS MIDI: Clock send started at % BPM".format(~CHRONOS[\tempo]).postln;
+            "CHRONOS MIDI: Clock send started at % BPM".format(~chronos[\tempo]).postln;
         };
     },
 
@@ -100,7 +100,7 @@
     // ==========================================
     // Record incoming MIDI notes into a track's pattern
     armTrackForRecording: { |self, trackIdx|
-        var track = ~CHRONOS[\tracks][trackIdx];
+        var track = ~chronos[\tracks][trackIdx];
         if(track.notNil) {
             track[\recording] = true;
             "CHRONOS MIDI: Track % armed for recording".format(trackIdx).postln;
@@ -108,7 +108,7 @@
     },
 
     disarmTrackRecording: { |self, trackIdx|
-        var track = ~CHRONOS[\tracks][trackIdx];
+        var track = ~chronos[\tracks][trackIdx];
         if(track.notNil) {
             track[\recording] = false;
             "CHRONOS MIDI: Track % disarmed".format(trackIdx).postln;
@@ -117,8 +117,8 @@
 
     // Called on MIDI noteOn — records to armed tracks
     recordNote: { |self, note, velocity, channel|
-        ~CHRONOS[\tracks].do({ |track, idx|
-            if(track.notNil and: { track[\recording] == true } and: { ~CHRONOS[\playing] }) {
+        ~chronos[\tracks].do({ |track, idx|
+            if(track.notNil and: { track[\recording] == true } and: { ~chronos[\playing] }) {
                 var step = track[\currentStep] % track[\numSteps];
                 track[\pattern][step][\active] = true;
                 track[\pattern][step][\note] = note;
@@ -132,42 +132,42 @@
 // OSC RESPONDERS
 // ==========================================
 OSCdef(\chronos_midi_route, { |msg|
-    ~CHRONOS_MIDI.routeTrackToMIDI(msg[1].asInteger,
+    ~chronos_midi.routeTrackToMIDI(msg[1].asInteger,
         msg[2] !? _.asInteger ?? 0,
         msg[3] !? _.asInteger ?? 0);
 }, "/chronos/midi/route");
 
 OSCdef(\chronos_midi_unroute, { |msg|
-    ~CHRONOS_MIDI.unrouteTrackMIDI(msg[1].asInteger);
+    ~chronos_midi.unrouteTrackMIDI(msg[1].asInteger);
 }, "/chronos/midi/unroute");
 
 OSCdef(\chronos_midi_clock_send, { |msg|
     if(msg[1].asInteger > 0) {
-        ~CHRONOS_MIDI.startClockSend;
+        ~chronos_midi.startClockSend;
     } {
-        ~CHRONOS_MIDI.stopClockSend;
+        ~chronos_midi.stopClockSend;
     };
 }, "/chronos/midi/clock/send");
 
 OSCdef(\chronos_midi_clock_sync, {
-    ~CHRONOS_MIDI.syncToExternalClock;
+    ~chronos_midi.syncToExternalClock;
 }, "/chronos/midi/clock/sync");
 
 OSCdef(\chronos_midi_arm, { |msg|
-    ~CHRONOS_MIDI.armTrackForRecording(msg[1].asInteger);
+    ~chronos_midi.armTrackForRecording(msg[1].asInteger);
 }, "/chronos/midi/arm");
 
 OSCdef(\chronos_midi_disarm, { |msg|
-    ~CHRONOS_MIDI.disarmTrackRecording(msg[1].asInteger);
+    ~chronos_midi.disarmTrackRecording(msg[1].asInteger);
 }, "/chronos/midi/disarm");
 
 OSCdef(\chronos_midi_init_out, {
-    ~CHRONOS_MIDI.initOutput;
+    ~chronos_midi.initOutput;
 }, "/chronos/midi/init");
 
 // Hook MIDI recording into the MIDI input system
 MIDIdef.noteOn(\chronos_record, { |vel, note, ch, src|
-    ~CHRONOS_MIDI.recordNote(note, vel, ch);
+    ~chronos_midi.recordNote(note, vel, ch);
 });
 
 "--- BRAHMA: CHRONOS MIDI I/O Online ---".postln;

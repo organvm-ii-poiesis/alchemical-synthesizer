@@ -15,9 +15,9 @@ s.waitForBoot({
 
     "--- BRAHMA: Server Booted ---".postln;
 
-    // 2. Group Hierarchy (~SC_GRP)
+    // 2. Group Hierarchy (~sc_grp)
     // Order: Input -> Binding -> Analysis -> Transmutation -> Protection -> Release
-    ~SC_GRP = (
+    ~sc_grp = (
         root: Group.head(s),
         ia: nil, bc: nil, ae: nil, te: nil, pr: nil, rr: nil,
 
@@ -51,28 +51,28 @@ s.waitForBoot({
     );
 
     // Build main groups in strict signal-flow order
-    ~SC_GRP[\ia] = Group.after(~SC_GRP[\root]);
-    ~SC_GRP[\bc] = Group.after(~SC_GRP[\ia]);
-    ~SC_GRP[\ae] = Group.after(~SC_GRP[\bc]);
-    ~SC_GRP[\te] = Group.after(~SC_GRP[\ae]);
-    ~SC_GRP[\pr] = Group.after(~SC_GRP[\te]);
-    ~SC_GRP[\rr] = Group.after(~SC_GRP[\pr]);
+    ~sc_grp[\ia] = Group.after(~sc_grp[\root]);
+    ~sc_grp[\bc] = Group.after(~sc_grp[\ia]);
+    ~sc_grp[\ae] = Group.after(~sc_grp[\bc]);
+    ~sc_grp[\te] = Group.after(~sc_grp[\ae]);
+    ~sc_grp[\pr] = Group.after(~sc_grp[\te]);
+    ~sc_grp[\rr] = Group.after(~sc_grp[\pr]);
 
-    // 3. Bus Dictionary (~SC_BUS)
-    ~SC_BUS = Dictionary.new;
+    // 3. Bus Dictionary (~sc_bus)
+    ~sc_bus = Dictionary.new;
 
     // Global Audio Buses (Virtual Rack Backplane)
-    ~SC_BUS.add(\bus_audio_shared -> Bus.audio(s, 1));
-    ~SC_BUS.add(\master_bus -> Bus.audio(s, 2));      // Stereo master
-    ~SC_BUS.add(\cue_bus -> Bus.audio(s, 2));          // Headphone cue
+    ~sc_bus.add(\bus_audio_shared -> Bus.audio(s, 1));
+    ~sc_bus.add(\master_bus -> Bus.audio(s, 2));      // Stereo master
+    ~sc_bus.add(\cue_bus -> Bus.audio(s, 2));          // Headphone cue
 
     // Aux send/return buses (8 sends)
     8.do({ |i|
-        ~SC_BUS.add(("aux_send_" ++ i).asSymbol -> Bus.audio(s, 2));
+        ~sc_bus.add(("aux_send_" ++ i).asSymbol -> Bus.audio(s, 2));
     });
 
-    // 4. Global Registry (~BRAHMA_REGISTRY)
-    ~BRAHMA_REGISTRY = (
+    // 4. Global Registry (~brahma_registry)
+    ~brahma_registry = (
         entities: Dictionary.new,
         trait_maps: Dictionary.new,
         lineage_graph: Dictionary.new,
@@ -95,15 +95,15 @@ s.waitForBoot({
         }
     );
 
-    // 5. Global Tuning State (~BRAHMA_TUNING)
-    ~BRAHMA_TUNING = (
+    // 5. Global Tuning State (~brahma_tuning)
+    ~brahma_tuning = (
         currentScale: nil,  // BrahmaScale instance (set by 02_microtonality)
         rootHz: 440.0,
         transpose: 0        // Semitone offset
     );
 
-    // 6. The Bridge State (~BRIDGE)
-    ~BRIDGE = (
+    // 6. The Bridge State (~bridge)
+    ~bridge = (
         domains: Dictionary.new,
         active_links: List.new,
 
@@ -120,10 +120,10 @@ s.waitForBoot({
     );
 
     // Initialize Domains (4 default zones)
-    4.do { |i| ~BRIDGE.domains.put(i, (id: i, modules: List.new)) };
+    4.do { |i| ~bridge.domains.put(i, (id: i, modules: List.new)) };
 
     "--- BRAHMA: Infrastructure Ready ---".postln;
-    "Groups: %, %, %, %, %, %".format(~SC_GRP[\ia], ~SC_GRP[\bc], ~SC_GRP[\ae], ~SC_GRP[\te], ~SC_GRP[\pr], ~SC_GRP[\rr]).postln;
+    "Groups: %, %, %, %, %, %".format(~sc_grp[\ia], ~sc_grp[\bc], ~sc_grp[\ae], ~sc_grp[\te], ~sc_grp[\pr], ~sc_grp[\rr]).postln;
     "Audio buses: %, Control buses: %".format(s.options.numAudioBusChannels, s.options.numControlBusChannels).postln;
 });
 )

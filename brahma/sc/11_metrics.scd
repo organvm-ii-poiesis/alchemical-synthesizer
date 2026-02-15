@@ -7,7 +7,7 @@
 */
 
 (
-~METRIC_COLLECTOR = (
+~metric_collector = (
     metrics: Dictionary.new,
     history: List.new,
 

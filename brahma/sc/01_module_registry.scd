@@ -6,7 +6,7 @@
 */
 
 (
-~MODULE_REGISTRY = (
+~module_registry = (
     modules: IdentityDictionary.new,
 
     // Register a module with full parameter specs
@@ -16,7 +16,7 @@
             category: category.asSymbol,
             synthDef: synthDef.asSymbol,
             params: params,
-            group: group ? ~SC_GRP[\te],
+            group: group ? ~sc_grp[\te],
             description: description ? "",
             instances: IdentityDictionary.new
         ));
@@ -105,8 +105,8 @@
 
 // List all registered modules → broadcasts to 57122
 OSCdef(\reg_list_modules, { |msg|
-    var target = ~VISUAL_CORTEX.target;
-    ~MODULE_REGISTRY[\modules].keysValuesDo({ |name, spec|
+    var target = ~visual_cortex.target;
+    ~module_registry[\modules].keysValuesDo({ |name, spec|
         target.sendMsg(
             "/brahma/registry/module",
             name.asString,
@@ -117,15 +117,15 @@ OSCdef(\reg_list_modules, { |msg|
             spec[\description]
         );
     });
-    target.sendMsg("/brahma/registry/done", ~MODULE_REGISTRY.count);
-    "MODULE_REGISTRY: Broadcast % modules".format(~MODULE_REGISTRY.count).postln;
+    target.sendMsg("/brahma/registry/done", ~module_registry.count);
+    "MODULE_REGISTRY: Broadcast % modules".format(~module_registry.count).postln;
 }, "/brahma/modules/list");
 
 // Get params for a specific module → broadcasts to 57122
 OSCdef(\reg_list_params, { |msg|
     var moduleName = msg[1].asSymbol;
-    var spec = ~MODULE_REGISTRY.getSpec(moduleName);
-    var target = ~VISUAL_CORTEX.target;
+    var spec = ~module_registry.getSpec(moduleName);
+    var target = ~visual_cortex.target;
     if(spec.notNil) {
         spec[\params].do({ |p|
             target.sendMsg(
@@ -146,8 +146,8 @@ OSCdef(\reg_list_params, { |msg|
 // List instances for a specific module → broadcasts to 57122
 OSCdef(\reg_list_instances, { |msg|
     var moduleName = msg[1].asSymbol;
-    var spec = ~MODULE_REGISTRY.getSpec(moduleName);
-    var target = ~VISUAL_CORTEX.target;
+    var spec = ~module_registry.getSpec(moduleName);
+    var target = ~visual_cortex.target;
     if(spec.notNil) {
         spec[\instances].keysValuesDo({ |instName, inst|
             target.sendMsg(
@@ -175,7 +175,7 @@ OSCdef(\reg_create_instance, { |msg|
         };
         a;
     } { nil };
-    ~MODULE_REGISTRY.instantiate(moduleName, instanceName, args, outBus);
+    ~module_registry.instantiate(moduleName, instanceName, args, outBus);
 }, "/brahma/module/create");
 
 // Set param on a module instance via OSC
@@ -184,14 +184,14 @@ OSCdef(\reg_set_param, { |msg|
     var instanceName = msg[2].asSymbol;
     var param = msg[3].asSymbol;
     var value = msg[4].asFloat;
-    ~MODULE_REGISTRY.setParam(moduleName, instanceName, param, value);
+    ~module_registry.setParam(moduleName, instanceName, param, value);
 }, "/brahma/module/set");
 
 // Free a module instance via OSC
 OSCdef(\reg_free_instance, { |msg|
     var moduleName = msg[1].asSymbol;
     var instanceName = msg[2].asSymbol;
-    ~MODULE_REGISTRY.freeInstance(moduleName, instanceName);
+    ~module_registry.freeInstance(moduleName, instanceName);
 }, "/brahma/module/free");
 
 "--- BRAHMA: Module Registry Online ---".postln;

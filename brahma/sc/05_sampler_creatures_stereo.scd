@@ -55,9 +55,9 @@ SynthDef(\protean_hound_stereo, {
     ptrR = Phasor.ar(0, 1, 0, BufFrames.ir(bufR));
     
     // Asymmetric pointer jumps
-    ptrL = TChoose.kr(trig, [ptrL - (TRand.kr(0.01, 0.5, trig) * SampleRate.ir * chaos), ptrL]);
-    ptrR = TChoose.kr(trig, [ptrR - (TRand.kr(0.01, 0.5, trig) * SampleRate.ir * (chaos * 1.1)), ptrR]);
-    
+    ptrL = K2A.ar(TChoose.kr(trig, [ptrL - (TRand.kr(0.01, 0.5, trig) * SampleRate.ir * chaos), ptrL]));
+    ptrR = K2A.ar(TChoose.kr(trig, [ptrR - (TRand.kr(0.01, 0.5, trig) * SampleRate.ir * (chaos * 1.1)), ptrR]));
+
     sigL = BufRd.ar(1, bufL, ptrL, loop: 1);
     sigR = BufRd.ar(1, bufR, ptrR, loop: 1);
     
@@ -99,7 +99,8 @@ SynthDef(\ossuary_monk_stereo, {
     var in, trig, exciter, sigL, sigR;
     
     in = (In.ar(inBusL, 1) + In.ar(inBusR, 1)) * 0.5;
-    trig = Coyote.kr(in, thresh: impactThreshold);
+    // Coyote fallback: onset detection via amplitude threshold
+    trig = Trig1.kr(Amplitude.kr(in) > impactThreshold, 0.01);
     exciter = Decay.ar(K2A.ar(trig), 0.01) * PinkNoise.ar;
     
     sigL = DynKlank.ar(`[[200, 450, 800, 1200] * (1 - (gravity * 0.5)), [1, 0.8, 0.6, 0.4], [1, 1, 1, 1] * relicDecay], exciter);

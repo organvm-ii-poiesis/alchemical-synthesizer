@@ -8,7 +8,7 @@
 // ==========================================
 // STEP SEQUENCER (1-64 steps, multiple directions)
 // ==========================================
-~SIBYL_STEP = { |numSteps=16, direction=0|
+~sibyl_step = { |numSteps=16, direction=0|
     // direction: 0=forward, 1=backward, 2=pendulum, 3=random
     var seq = (
         steps: Array.fill(numSteps, { 0.5 }),
@@ -76,7 +76,7 @@
 // ==========================================
 // EUCLIDEAN GENERATOR
 // ==========================================
-~SIBYL_EUCLIDEAN = { |length=16, fills=4, rotation=0|
+~sibyl_euclidean = { |length=16, fills=4, rotation=0|
     var seq = (
         length: length,
         fills: fills,
@@ -131,7 +131,7 @@
 // ==========================================
 // SHIFT REGISTER / TURING MACHINE
 // ==========================================
-~SIBYL_TURING = { |bits=8, probability=0.5|
+~sibyl_turing = { |bits=8, probability=0.5|
     var seq = (
         register: Array.fill(bits, { 2.rand }),
         bits: bits,
@@ -186,7 +186,7 @@
 // ==========================================
 // MARKOV CHAIN
 // ==========================================
-~SIBYL_MARKOV = { |numStates=8, temperature=0.5|
+~sibyl_markov = { |numStates=8, temperature=0.5|
     var seq = (
         numStates: numStates,
         // Transition matrix: probabilities[from][to]
@@ -198,15 +198,16 @@
 
         advance: { |self|
             var probs = self[\matrix][self[\currentState]].copy;
+            var cumSum, roll, nextState;
             // Apply temperature
             if(self[\temperature] < 1.0) {
                 probs = probs.pow(1 / self[\temperature].max(0.01));
                 probs = probs / probs.sum.max(0.001);
             };
             // Weighted random selection
-            var cumSum = 0;
-            var roll = 1.0.rand;
-            var nextState = self[\numStates] - 1;
+            cumSum = 0;
+            roll = 1.0.rand;
+            nextState = self[\numStates] - 1;
             probs.do({ |p, i|
                 cumSum = cumSum + p;
                 if(roll < cumSum and: { nextState == (self[\numStates] - 1) }) {
@@ -223,10 +224,11 @@
         },
 
         setTransition: { |self, from, to, weight|
+            var row, sum;
             self[\matrix][from][to] = weight.max(0);
             // Renormalize row
-            var row = self[\matrix][from];
-            var sum = row.sum.max(0.001);
+            row = self[\matrix][from];
+            sum = row.sum.max(0.001);
             self[\matrix][from] = row / sum;
         },
 
@@ -257,7 +259,7 @@
 // ==========================================
 // CELLULAR AUTOMATA (1D Wolfram rules)
 // ==========================================
-~SIBYL_AUTOMATA = { |numCells=16, rule=30|
+~sibyl_automata = { |numCells=16, rule=30|
     var seq = (
         cells: Array.fill(numCells, { 2.rand }),
         numCells: numCells,
@@ -318,7 +320,7 @@
 // ==========================================
 // L-SYSTEM (Lindenmayer grammar)
 // ==========================================
-~SIBYL_LSYSTEM = { |axiom="F", rules=nil, depth=3|
+~sibyl_lsystem = { |axiom="F", rules=nil, depth=3|
     var seq = (
         axiom: axiom,
         rules: rules ?? { IdentityDictionary[\F -> "F+F-F-F+F"] },
@@ -333,7 +335,8 @@
         noteOffset: 60,
 
         generate: { |self|
-            var str = self[\axiom];
+            var str, currentNote;
+            str = self[\axiom];
             self[\depth].clip(1, 8).do({
                 var newStr = "";
                 str.do({ |char|
@@ -348,7 +351,7 @@
             });
             // Convert to note sequence
             self[\sequence] = Array.new;
-            var currentNote = self[\noteOffset];
+            currentNote = self[\noteOffset];
             str.do({ |char|
                 var interval = self[\charMap][char];
                 if(interval.notNil) {
@@ -435,7 +438,7 @@ SynthDef(\sibyl_comparator_seq, {
 // ==========================================
 
 // Global sequencer instances
-~SIBYL_INSTANCES = IdentityDictionary.new;
+~sibyl_instances = IdentityDictionary.new;
 
 OSCdef(\sibyl_create, { |msg|
     var type = msg[1].asSymbol;
@@ -446,51 +449,51 @@ OSCdef(\sibyl_create, { |msg|
         \step, {
             var steps = msg[3] ? 16;
             var dir = msg[4] ? 0;
-            instance = ~SIBYL_STEP.(steps.asInteger, dir.asInteger);
+            instance = ~sibyl_step.(steps.asInteger, dir.asInteger);
         },
         \euclidean, {
             var len = msg[3] ? 16;
             var fills = msg[4] ? 4;
             var rot = msg[5] ? 0;
-            instance = ~SIBYL_EUCLIDEAN.(len.asInteger, fills.asInteger, rot.asInteger);
+            instance = ~sibyl_euclidean.(len.asInteger, fills.asInteger, rot.asInteger);
         },
         \turing, {
             var bits = msg[3] ? 8;
             var prob = msg[4] ? 0.5;
-            instance = ~SIBYL_TURING.(bits.asInteger, prob.asFloat);
+            instance = ~sibyl_turing.(bits.asInteger, prob.asFloat);
         },
         \markov, {
             var states = msg[3] ? 8;
             var temp = msg[4] ? 0.5;
-            instance = ~SIBYL_MARKOV.(states.asInteger, temp.asFloat);
+            instance = ~sibyl_markov.(states.asInteger, temp.asFloat);
         },
         \automata, {
             var cells = msg[3] ? 16;
             var rule = msg[4] ? 30;
-            instance = ~SIBYL_AUTOMATA.(cells.asInteger, rule.asInteger);
+            instance = ~sibyl_automata.(cells.asInteger, rule.asInteger);
         },
         \lsystem, {
             var axiom = msg[3].asString;
-            instance = ~SIBYL_LSYSTEM.(axiom);
+            instance = ~sibyl_lsystem.(axiom);
         }
     );
 
     if(instance.notNil) {
-        ~SIBYL_INSTANCES[name] = instance;
+        ~sibyl_instances[name] = instance;
         "SIBYL: Created % '%'".format(type, name).postln;
     };
 }, "/sibyl/create");
 
 OSCdef(\sibyl_advance, { |msg|
     var name = msg[1].asSymbol;
-    var inst = ~SIBYL_INSTANCES[name];
+    var inst = ~sibyl_instances[name];
     if(inst.notNil) { inst.advance };
 }, "/sibyl/advance");
 
 OSCdef(\sibyl_get, { |msg|
     var name = msg[1].asSymbol;
     var outBusIdx = msg[2].asInteger;
-    var inst = ~SIBYL_INSTANCES[name];
+    var inst = ~sibyl_instances[name];
     if(inst.notNil) {
         var outBus = Bus(\control, outBusIdx, 1, s);
         outBus.set(inst.getValue);
@@ -499,70 +502,70 @@ OSCdef(\sibyl_get, { |msg|
 
 OSCdef(\sibyl_reset, { |msg|
     var name = msg[1].asSymbol;
-    var inst = ~SIBYL_INSTANCES[name];
+    var inst = ~sibyl_instances[name];
     if(inst.notNil) { inst.reset };
 }, "/sibyl/reset");
 
 "--- BRAHMA: SIBYL Sequencer Modules Online (8 modules) ---".postln;
 
 // --- MODULE REGISTRY REGISTRATION ---
-if(~MODULE_REGISTRY.notNil) {
+if(~module_registry.notNil) {
     // 1. Step Sequencer — 1-64 steps, multiple directions
-    ~MODULE_REGISTRY.register(\SIBYL_STEP, \modular, \SIBYL_STEP, [
+    ~module_registry.register(\SIBYL_STEP, \modular, \SIBYL_STEP, [
         (\name: \numSteps, \default: 16, \min: 1, \max: 64, \units: "steps", \desc: "Number of steps"),
         (\name: \direction, \default: 0, \min: 0, \max: 3, \units: "", \desc: "Direction (0=fwd 1=rev 2=pend 3=rand)")
-    ], ~SC_GRP[\te], "Step sequencer with forward/backward/pendulum/random directions");
+    ], ~sc_grp[\te], "Step sequencer with forward/backward/pendulum/random directions");
 
     // 2. Euclidean Generator — Bjorklund algorithm pattern generator
-    ~MODULE_REGISTRY.register(\SIBYL_EUCLIDEAN, \modular, \SIBYL_EUCLIDEAN, [
+    ~module_registry.register(\SIBYL_EUCLIDEAN, \modular, \SIBYL_EUCLIDEAN, [
         (\name: \length, \default: 16, \min: 1, \max: 64, \units: "steps", \desc: "Pattern length"),
         (\name: \fills, \default: 4, \min: 0, \max: 64, \units: "", \desc: "Number of active steps"),
         (\name: \rotation, \default: 0, \min: 0, \max: 63, \units: "", \desc: "Pattern rotation offset")
-    ], ~SC_GRP[\te], "Euclidean rhythm generator with rotation");
+    ], ~sc_grp[\te], "Euclidean rhythm generator with rotation");
 
     // 3. Shift Register / Turing Machine — probabilistic bit-shift sequencer
-    ~MODULE_REGISTRY.register(\SIBYL_TURING, \modular, \SIBYL_TURING, [
+    ~module_registry.register(\SIBYL_TURING, \modular, \SIBYL_TURING, [
         (\name: \bits, \default: 8, \min: 1, \max: 32, \units: "bits", \desc: "Register length"),
         (\name: \probability, \default: 0.5, \min: 0, \max: 1, \units: "", \desc: "Probability of keeping bit (1=locked loop)")
-    ], ~SC_GRP[\te], "Turing Machine shift register with probability control");
+    ], ~sc_grp[\te], "Turing Machine shift register with probability control");
 
     // 4. Markov Chain — probabilistic state machine sequencer
-    ~MODULE_REGISTRY.register(\SIBYL_MARKOV, \modular, \SIBYL_MARKOV, [
+    ~module_registry.register(\SIBYL_MARKOV, \modular, \SIBYL_MARKOV, [
         (\name: \numStates, \default: 8, \min: 2, \max: 64, \units: "", \desc: "Number of states"),
         (\name: \temperature, \default: 0.5, \min: 0.01, \max: 1, \units: "", \desc: "Temperature (lower=more deterministic)")
-    ], ~SC_GRP[\te], "Markov chain sequencer with trainable transition matrix");
+    ], ~sc_grp[\te], "Markov chain sequencer with trainable transition matrix");
 
     // 5. Cellular Automata — 1D Wolfram rule sequencer
-    ~MODULE_REGISTRY.register(\SIBYL_AUTOMATA, \modular, \SIBYL_AUTOMATA, [
+    ~module_registry.register(\SIBYL_AUTOMATA, \modular, \SIBYL_AUTOMATA, [
         (\name: \numCells, \default: 16, \min: 4, \max: 64, \units: "cells", \desc: "Number of cells"),
         (\name: \rule, \default: 30, \min: 0, \max: 255, \units: "", \desc: "Wolfram rule number (0-255)")
-    ], ~SC_GRP[\te], "1D cellular automata sequencer using Wolfram rules");
+    ], ~sc_grp[\te], "1D cellular automata sequencer using Wolfram rules");
 
     // 6. L-System — Lindenmayer grammar-based note sequencer
-    ~MODULE_REGISTRY.register(\SIBYL_LSYSTEM, \modular, \SIBYL_LSYSTEM, [
+    ~module_registry.register(\SIBYL_LSYSTEM, \modular, \SIBYL_LSYSTEM, [
         (\name: \depth, \default: 3, \min: 1, \max: 8, \units: "", \desc: "Grammar expansion depth"),
         (\name: \noteOffset, \default: 60, \min: 24, \max: 108, \units: "MIDI", \desc: "Base MIDI note offset")
-    ], ~SC_GRP[\te], "L-System grammar sequencer with character-to-note mapping");
+    ], ~sc_grp[\te], "L-System grammar sequencer with character-to-note mapping");
 
     // 7. Bernoulli Gate — probability-based trigger routing
-    ~MODULE_REGISTRY.register(\sibyl_bernoulli, \modular, \sibyl_bernoulli, [
+    ~module_registry.register(\sibyl_bernoulli, \modular, \sibyl_bernoulli, [
         (\name: \inBus, \default: 0, \min: 0, \max: 2048, \units: "bus", \desc: "Trigger input bus"),
         (\name: \probability, \default: 0.5, \min: 0, \max: 1, \units: "", \desc: "Probability of routing to output A")
-    ], ~SC_GRP[\te], "Bernoulli gate: probability-based trigger routing to A/B outputs");
+    ], ~sc_grp[\te], "Bernoulli gate: probability-based trigger routing to A/B outputs");
 
     // 8. Bernoulli Gate AR — audio-rate probability routing
-    ~MODULE_REGISTRY.register(\sibyl_bernoulli_ar, \modular, \sibyl_bernoulli_ar, [
+    ~module_registry.register(\sibyl_bernoulli_ar, \modular, \sibyl_bernoulli_ar, [
         (\name: \inBus, \default: 0, \min: 0, \max: 2048, \units: "bus", \desc: "Audio input bus"),
         (\name: \trigBus, \default: 0, \min: 0, \max: 2048, \units: "bus", \desc: "Trigger bus for coin flip"),
         (\name: \probability, \default: 0.5, \min: 0, \max: 1, \units: "", \desc: "Probability of routing to output A")
-    ], ~SC_GRP[\te], "Audio-rate Bernoulli gate with external trigger");
+    ], ~sc_grp[\te], "Audio-rate Bernoulli gate with external trigger");
 
     // 9. Comparator Sequencer — CV threshold to gate patterns
-    ~MODULE_REGISTRY.register(\sibyl_comparator_seq, \modular, \sibyl_comparator_seq, [
+    ~module_registry.register(\sibyl_comparator_seq, \modular, \sibyl_comparator_seq, [
         (\name: \inBus, \default: 0, \min: 0, \max: 2048, \units: "bus", \desc: "CV input bus"),
         (\name: \threshold, \default: 0.5, \min: 0, \max: 1, \units: "", \desc: "Comparison threshold"),
         (\name: \hysteresis, \default: 0.01, \min: 0, \max: 0.2, \units: "", \desc: "Hysteresis amount")
-    ], ~SC_GRP[\te], "Comparator sequencer: CV threshold to gate with hysteresis");
+    ], ~sc_grp[\te], "Comparator sequencer: CV threshold to gate with hysteresis");
 
     "  MODULE_REGISTRY: 9 Sibyl sequencer modules registered".postln;
 };

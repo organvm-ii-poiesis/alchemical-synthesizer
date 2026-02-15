@@ -7,7 +7,7 @@
 // ==========================================
 // GLOBAL MIDI STATE
 // ==========================================
-~BRAHMA_MIDI = (
+~brahma_midi = (
     mpe: BrahmaMPE.new(16, true),
     enabled: false,
     clockRunning: false,
@@ -32,11 +32,11 @@
 // ==========================================
 // MIDI INITIALIZATION
 // ==========================================
-~BRAHMA_MIDI[\init] = { |self|
+~brahma_midi[\init] = { |self|
     MIDIClient.init;
     MIDIIn.connectAll;
     self[\enabled] = true;
-    self[\targetGroup] = ~SC_GRP[\te];
+    self[\targetGroup] = ~sc_grp[\te];
 
     // Initialize MIDI output (first available destination, or nil if none)
     if(MIDIClient.destinations.size > 0) {
@@ -58,11 +58,11 @@
 
         // Get frequency from tuning system
         freq = self[\mpe].voiceFreq(voiceIdx,
-            ~BRAHMA_TUNING[\currentScale],
-            ~BRAHMA_TUNING[\rootHz]);
+            ~brahma_tuning[\currentScale],
+            ~brahma_tuning[\rootHz]);
 
         // Apply global transpose
-        freq = freq * (2 ** (~BRAHMA_TUNING[\transpose] / 12));
+        freq = freq * (2 ** (~brahma_tuning[\transpose] / 12));
 
         v[\freq] = freq;
 
@@ -77,8 +77,8 @@
         ], target: self[\targetGroup]);
 
         // Broadcast to Visual Cortex
-        if(~VISUAL_CORTEX.notNil) {
-            ~VISUAL_CORTEX.target.sendMsg("/brahma/midi/noteOn",
+        if(~visual_cortex.notNil) {
+            ~visual_cortex.target.sendMsg("/brahma/midi/noteOn",
                 ch, note, vel, voiceIdx);
         };
     });
@@ -95,8 +95,8 @@
                 v[\synthNode].set(\gate, 0);
                 v[\synthNode] = nil;
             };
-            if(~VISUAL_CORTEX.notNil) {
-                ~VISUAL_CORTEX.target.sendMsg("/brahma/midi/noteOff",
+            if(~visual_cortex.notNil) {
+                ~visual_cortex.target.sendMsg("/brahma/midi/noteOff",
                     ch, note, vel, voiceIdx);
             };
         };
@@ -113,9 +113,9 @@
             var v = self[\mpe].voices[idx];
             if(v[\synthNode].notNil) {
                 var freq = self[\mpe].voiceFreq(idx,
-                    ~BRAHMA_TUNING[\currentScale],
-                    ~BRAHMA_TUNING[\rootHz]);
-                freq = freq * (2 ** (~BRAHMA_TUNING[\transpose] / 12));
+                    ~brahma_tuning[\currentScale],
+                    ~brahma_tuning[\rootHz]);
+                freq = freq * (2 ** (~brahma_tuning[\transpose] / 12));
                 v[\synthNode].set(\freq, freq);
             };
         });
@@ -168,10 +168,11 @@
         self[\learnRoutes].keysValuesDo({ |key, route|
             if(route[\channel] == ch and: { route[\cc] == cc }) {
                 // Route to patch bay or direct parameter
-                if(~VISUAL_CORTEX.notNil) {
-                    ~VISUAL_CORTEX.target.sendMsg("/brahma/midi/cc",
+                if(~visual_cortex.notNil) {
+                    ~visual_cortex.target.sendMsg("/brahma/midi/cc",
                         ch, cc, val, route[\target]);
                 };
+            };
         });
     });
 
@@ -204,7 +205,7 @@
 // ==========================================
 // MIDI OUTPUT
 // ==========================================
-~BRAHMA_MIDI[\sendNote] = { |self, ch, note, vel, dur=0.25|
+~brahma_midi[\sendNote] = { |self, ch, note, vel, dur=0.25|
     // Requires MIDIOut to be initialized
     if(self[\midiOut].notNil) {
         self[\midiOut].noteOn(ch, note, vel);
@@ -215,7 +216,7 @@
     };
 };
 
-~BRAHMA_MIDI[\sendClock] = { |self, bpm|
+~brahma_midi[\sendClock] = { |self, bpm|
     // Send MIDI clock at 24 PPQN
     var interval = 60 / bpm / 24;
     if(self[\clockRoutine].notNil) { self[\clockRoutine].stop };
@@ -230,7 +231,7 @@
     };
 };
 
-~BRAHMA_MIDI[\stopClock] = { |self|
+~brahma_midi[\stopClock] = { |self|
     if(self[\clockRoutine].notNil) {
         self[\clockRoutine].stop;
         self[\clockRoutine] = nil;
@@ -246,8 +247,8 @@
 
 // /brahma/midi/route <synthDef:string> <outBus:int>
 OSCdef(\brahma_midi_route, { |msg|
-    ~BRAHMA_MIDI[\targetSynthDef] = msg[1].asSymbol;
-    ~BRAHMA_MIDI[\targetOutBus] = msg[2].asInteger;
+    ~brahma_midi[\targetSynthDef] = msg[1].asSymbol;
+    ~brahma_midi[\targetOutBus] = msg[2].asInteger;
     "MIDI: Routed to '%' on bus %".format(msg[1], msg[2]).postln;
 }, "/brahma/midi/route");
 
@@ -257,10 +258,10 @@ OSCdef(\brahma_midi_mpe_config, { |msg|
     var lower = msg[2].asInteger;
     var upper = msg[3].asInteger;
 
-    ~BRAHMA_MIDI[\mpe] = BrahmaMPE.new(16, enabled);
+    ~brahma_midi[\mpe] = BrahmaMPE.new(16, enabled);
     if(enabled) {
-        ~BRAHMA_MIDI[\mpe].setLowerZone(lower);
-        if(upper > 0) { ~BRAHMA_MIDI[\mpe].setUpperZone(upper) };
+        ~brahma_midi[\mpe].setLowerZone(lower);
+        if(upper > 0) { ~brahma_midi[\mpe].setUpperZone(upper) };
     };
     "MIDI: MPE % (lower:%, upper:%)".format(
         if(enabled, "enabled", "disabled"), lower, upper).postln;
@@ -268,24 +269,24 @@ OSCdef(\brahma_midi_mpe_config, { |msg|
 
 // /brahma/midi/learn <targetParam:string>
 OSCdef(\brahma_midi_learn, { |msg|
-    ~BRAHMA_MIDI[\learnMode] = true;
-    ~BRAHMA_MIDI[\learnTarget] = msg[1].asString;
+    ~brahma_midi[\learnMode] = true;
+    ~brahma_midi[\learnTarget] = msg[1].asString;
     "MIDI Learn: Waiting for CC input... (target: %)".format(msg[1]).postln;
 }, "/brahma/midi/learn");
 
 // /brahma/midi/panic
 OSCdef(\brahma_midi_panic, {
-    ~BRAHMA_MIDI[\mpe].panic;
+    ~brahma_midi[\mpe].panic;
 }, "/brahma/midi/panic");
 
 // /brahma/midi/bendRange <semitones:int>
 OSCdef(\brahma_midi_bendRange, { |msg|
-    ~BRAHMA_MIDI[\mpe].pitchBendRange = msg[1].asInteger.clip(1, 96);
+    ~brahma_midi[\mpe].pitchBendRange = msg[1].asInteger.clip(1, 96);
     "MIDI: Pitch bend range set to ±% semitones".format(msg[1]).postln;
 }, "/brahma/midi/bendRange");
 
 // Initialize MIDI
-~BRAHMA_MIDI.init;
+~brahma_midi.init;
 
 "--- BRAHMA: MIDI & MPE Infrastructure Online ---".postln;
 )

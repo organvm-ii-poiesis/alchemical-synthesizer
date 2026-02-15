@@ -7,7 +7,7 @@
 // ==========================================
 // TRANSPORT
 // ==========================================
-~CHRONOS[\play] = { |self|
+~chronos[\play] = { |self|
     if(self[\playing].not) {
         self[\playing] = true;
         self[\clock] = TempoClock(self[\tempo] / 60);
@@ -47,7 +47,7 @@
                             };
 
                             // Evaluate step condition
-                            shouldTrigger = ~CHRONOS_TRACKS.evaluateCondition(
+                            shouldTrigger = ~chronos_tracks.evaluateCondition(
                                 stepData[\condition], step, track, self[\fillActive]);
 
                             // Probability gate
@@ -67,10 +67,10 @@
                                 if(totalDelay > 0) {
                                     {
                                         totalDelay.wait;
-                                        ~CHRONOS_TRACKS.triggerStep(trackIdx, step);
+                                        ~chronos_tracks.triggerStep(trackIdx, step);
                                     }.fork(self[\clock]);
                                 } {
-                                    ~CHRONOS_TRACKS.triggerStep(trackIdx, step);
+                                    ~chronos_tracks.triggerStep(trackIdx, step);
                                 };
 
                                 // Handle ratchets (retriggers within step)
@@ -79,7 +79,7 @@
                                     (1..(stepData[\ratchet] - 1)).do({ |r|
                                         {
                                             (ratchetInterval * r).wait;
-                                            ~CHRONOS_TRACKS.triggerStep(trackIdx, step);
+                                            ~chronos_tracks.triggerStep(trackIdx, step);
                                         }.fork(self[\clock]);
                                     });
                                 };
@@ -93,13 +93,13 @@
 
                 // Broadcast step position at reduced rate
                 if((tickCount % (ppqn / 4)) == 0) { // Every 16th note
-                    ~VISUAL_CORTEX.target.sendMsg(
+                    ~visual_cortex.target.sendMsg(
                         "/chronos/tick", tickCount,
                         self[\tempo], self[\playing].asInteger);
                 };
 
                 // Drive DAEMON generative modules via clock bridge
-                if(~DAEMON_CLOCK_BRIDGE.notNil) { ~DAEMON_CLOCK_BRIDGE.tick(tickCount) };
+                if(~daemon_clock_bridge.notNil) { ~daemon_clock_bridge.tick(tickCount) };
 
                 tickCount = tickCount + 1;
                 tickDur.wait;
@@ -107,12 +107,12 @@
         }).play;
 
         // Broadcast transport state
-        ~VISUAL_CORTEX.target.sendMsg("/chronos/transport", 1, self[\tempo]);
+        ~visual_cortex.target.sendMsg("/chronos/transport", 1, self[\tempo]);
         "CHRONOS: Playing at % BPM".format(self[\tempo]).postln;
     };
 };
 
-~CHRONOS[\stop] = { |self|
+~chronos[\stop] = { |self|
     if(self[\playing]) {
         self[\playing] = false;
         Tdef(\chronos_master).stop;
@@ -122,17 +122,17 @@
             if(track.notNil) { track[\currentStep] = 0 };
         });
 
-        ~VISUAL_CORTEX.target.sendMsg("/chronos/transport", 0, self[\tempo]);
+        ~visual_cortex.target.sendMsg("/chronos/transport", 0, self[\tempo]);
         "CHRONOS: Stopped".postln;
     };
 };
 
-~CHRONOS[\setTempo] = { |self, bpm|
+~chronos[\setTempo] = { |self, bpm|
     self[\tempo] = bpm.clip(20, 300);
     if(self[\clock].notNil) {
         self[\clock].tempo = self[\tempo] / 60;
     };
-    ~VISUAL_CORTEX.target.sendMsg("/chronos/transport",
+    ~visual_cortex.target.sendMsg("/chronos/transport",
         self[\playing].asInteger, self[\tempo]);
     "CHRONOS: Tempo set to % BPM".format(self[\tempo]).postln;
 };
@@ -140,42 +140,42 @@
 // ==========================================
 // OSC TRANSPORT RESPONDERS
 // ==========================================
-OSCdef(\chronos_play, { ~CHRONOS.play }, "/chronos/transport/play");
-OSCdef(\chronos_stop, { ~CHRONOS.stop }, "/chronos/transport/stop");
-OSCdef(\chronos_tempo, { |msg| ~CHRONOS.setTempo(msg[1].asFloat) }, "/chronos/transport/tempo");
-OSCdef(\chronos_fill_on, { ~CHRONOS[\fillActive] = true }, "/chronos/fill/on");
-OSCdef(\chronos_fill_off, { ~CHRONOS[\fillActive] = false }, "/chronos/fill/off");
+OSCdef(\chronos_play, { ~chronos.play }, "/chronos/transport/play");
+OSCdef(\chronos_stop, { ~chronos.stop }, "/chronos/transport/stop");
+OSCdef(\chronos_tempo, { |msg| ~chronos.setTempo(msg[1].asFloat) }, "/chronos/transport/tempo");
+OSCdef(\chronos_fill_on, { ~chronos[\fillActive] = true }, "/chronos/fill/on");
+OSCdef(\chronos_fill_off, { ~chronos[\fillActive] = false }, "/chronos/fill/off");
 
 // Scene OSC
-OSCdef(\chronos_scene_save, { |msg| ~CHRONOS.saveScene(msg[1].asInteger) }, "/chronos/scene/save");
-OSCdef(\chronos_scene_load, { |msg| ~CHRONOS.loadScene(msg[1].asInteger) }, "/chronos/scene/load");
-OSCdef(\chronos_scene_morph, { |msg| ~CHRONOS.morphScenes(msg[1].asFloat) }, "/chronos/scene/morph");
-OSCdef(\chronos_scene_morph_src, { |msg| ~CHRONOS[\morphSourceScene] = msg[1].asInteger.clip(0,7) }, "/chronos/scene/morph/src");
-OSCdef(\chronos_scene_morph_dst, { |msg| ~CHRONOS[\morphTargetScene] = msg[1].asInteger.clip(0,7) }, "/chronos/scene/morph/dst");
+OSCdef(\chronos_scene_save, { |msg| ~chronos.saveScene(msg[1].asInteger) }, "/chronos/scene/save");
+OSCdef(\chronos_scene_load, { |msg| ~chronos.loadScene(msg[1].asInteger) }, "/chronos/scene/load");
+OSCdef(\chronos_scene_morph, { |msg| ~chronos.morphScenes(msg[1].asFloat) }, "/chronos/scene/morph");
+OSCdef(\chronos_scene_morph_src, { |msg| ~chronos[\morphSourceScene] = msg[1].asInteger.clip(0,7) }, "/chronos/scene/morph/src");
+OSCdef(\chronos_scene_morph_dst, { |msg| ~chronos[\morphTargetScene] = msg[1].asInteger.clip(0,7) }, "/chronos/scene/morph/dst");
 
 // Undo/Redo
-OSCdef(\chronos_undo, { ~CHRONOS.undo }, "/chronos/undo");
-OSCdef(\chronos_redo, { ~CHRONOS.redo }, "/chronos/redo");
+OSCdef(\chronos_undo, { ~chronos.undo }, "/chronos/undo");
+OSCdef(\chronos_redo, { ~chronos.redo }, "/chronos/redo");
 
 // Song mode
 OSCdef(\chronos_song_toggle, { |msg|
-    ~CHRONOS[\songMode] = msg[1].asInteger > 0;
-    "CHRONOS: Song mode %".format(if(~CHRONOS[\songMode], "ON", "OFF")).postln;
+    ~chronos[\songMode] = msg[1].asInteger > 0;
+    "CHRONOS: Song mode %".format(if(~chronos[\songMode], "ON", "OFF")).postln;
 }, "/chronos/song/toggle");
 
 OSCdef(\chronos_song_add, { |msg|
-    ~CHRONOS.addSongEntry(msg[1].asInteger, msg[2].asInteger, msg[3]);
+    ~chronos.addSongEntry(msg[1].asInteger, msg[2].asInteger, msg[3]);
 }, "/chronos/song/add");
 
-OSCdef(\chronos_song_clear, { ~CHRONOS.clearSong }, "/chronos/song/clear");
+OSCdef(\chronos_song_clear, { ~chronos.clearSong }, "/chronos/song/clear");
 
 // ==========================================
 // GOLEM LEGACY ALIASES
 // Maintain backward compatibility with Golem OSC
 // ==========================================
-OSCdef(\golem_play_alias, { ~CHRONOS.play }, "/golem/transport/play");
-OSCdef(\golem_stop_alias, { ~CHRONOS.stop }, "/golem/transport/stop");
-OSCdef(\golem_tempo_alias, { |msg| ~CHRONOS.setTempo(msg[1].asFloat) }, "/golem/transport/tempo");
+OSCdef(\golem_play_alias, { ~chronos.play }, "/golem/transport/play");
+OSCdef(\golem_stop_alias, { ~chronos.stop }, "/golem/transport/stop");
+OSCdef(\golem_tempo_alias, { |msg| ~chronos.setTempo(msg[1].asFloat) }, "/golem/transport/tempo");
 
 "--- BRAHMA: CHRONOS Clock Engine Online ---".postln;
 )

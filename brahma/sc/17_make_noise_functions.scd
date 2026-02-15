@@ -552,34 +552,34 @@ SynthDef(\hermetic_contour, {
 // cross-patch EOR/EOC signals via the Brahma Patch Bay.
 
 // Hermetic Dual buses
-~SC_BUS.put(\hermetic_dual_ch1_eor, Bus.control(s, 1));
-~SC_BUS.put(\hermetic_dual_ch1_eoc, Bus.control(s, 1));
-~SC_BUS.put(\hermetic_dual_ch4_eor, Bus.control(s, 1));
-~SC_BUS.put(\hermetic_dual_ch4_eoc, Bus.control(s, 1));
+~sc_bus.put(\hermetic_dual_ch1_eor, Bus.control(s, 1));
+~sc_bus.put(\hermetic_dual_ch1_eoc, Bus.control(s, 1));
+~sc_bus.put(\hermetic_dual_ch4_eor, Bus.control(s, 1));
+~sc_bus.put(\hermetic_dual_ch4_eoc, Bus.control(s, 1));
 
 // Hermetic Quad buses (4 channels x 2 triggers)
-~SC_BUS.put(\hermetic_quad_chA_eor, Bus.control(s, 1));
-~SC_BUS.put(\hermetic_quad_chA_eoc, Bus.control(s, 1));
-~SC_BUS.put(\hermetic_quad_chB_eor, Bus.control(s, 1));
-~SC_BUS.put(\hermetic_quad_chB_eoc, Bus.control(s, 1));
-~SC_BUS.put(\hermetic_quad_chC_eor, Bus.control(s, 1));
-~SC_BUS.put(\hermetic_quad_chC_eoc, Bus.control(s, 1));
-~SC_BUS.put(\hermetic_quad_chD_eor, Bus.control(s, 1));
-~SC_BUS.put(\hermetic_quad_chD_eoc, Bus.control(s, 1));
+~sc_bus.put(\hermetic_quad_chA_eor, Bus.control(s, 1));
+~sc_bus.put(\hermetic_quad_chA_eoc, Bus.control(s, 1));
+~sc_bus.put(\hermetic_quad_chB_eor, Bus.control(s, 1));
+~sc_bus.put(\hermetic_quad_chB_eoc, Bus.control(s, 1));
+~sc_bus.put(\hermetic_quad_chC_eor, Bus.control(s, 1));
+~sc_bus.put(\hermetic_quad_chC_eoc, Bus.control(s, 1));
+~sc_bus.put(\hermetic_quad_chD_eor, Bus.control(s, 1));
+~sc_bus.put(\hermetic_quad_chD_eoc, Bus.control(s, 1));
 
 // Hermetic Mono buses
-~SC_BUS.put(\hermetic_mono_eor, Bus.control(s, 1));
-~SC_BUS.put(\hermetic_mono_eoc, Bus.control(s, 1));
+~sc_bus.put(\hermetic_mono_eor, Bus.control(s, 1));
+~sc_bus.put(\hermetic_mono_eoc, Bus.control(s, 1));
 
 // Hermetic Contour buses
-~SC_BUS.put(\hermetic_contour_eor, Bus.control(s, 1));
-~SC_BUS.put(\hermetic_contour_eoc, Bus.control(s, 1));
+~sc_bus.put(\hermetic_contour_eor, Bus.control(s, 1));
+~sc_bus.put(\hermetic_contour_eoc, Bus.control(s, 1));
 
 // Audio output buses
-~SC_BUS.put(\hermetic_dual_out, Bus.audio(s, 6));   // ch1, ch4, ch2, ch3, sum, or
-~SC_BUS.put(\hermetic_quad_out, Bus.audio(s, 4));   // chA, chB, chC, chD
-~SC_BUS.put(\hermetic_mono_out, Bus.audio(s, 1));
-~SC_BUS.put(\hermetic_contour_out, Bus.audio(s, 1));
+~sc_bus.put(\hermetic_dual_out, Bus.audio(s, 6));   // ch1, ch4, ch2, ch3, sum, or
+~sc_bus.put(\hermetic_quad_out, Bus.audio(s, 4));   // chA, chB, chC, chD
+~sc_bus.put(\hermetic_mono_out, Bus.audio(s, 1));
+~sc_bus.put(\hermetic_contour_out, Bus.audio(s, 1));
 
 // ==========================================
 // ENTITY REGISTRATION
@@ -594,7 +594,7 @@ SynthDef(\hermetic_contour, {
     var type = spec[1];
     var id = spec[2];
 
-    ~BRAHMA_REGISTRY.registerEntity(id, type, (
+    ~brahma_registry.registerEntity(id, type, (
         spectral_profile: (centroid: 0.0, flatness: 0.0, bandwidth: 0.0, rolloff: 0.0),
         temporal_topology: (attack: 0.1, decay: 0.3, sustain: 1.0, release: 0.5, slew: 0.5),
         modulation_graph: (type: synthDef, sources: 0, dests: 0, routes: 0),
@@ -630,7 +630,7 @@ SynthDef(\hermetic_contour, {
 ].do({ |spec|
     var busName = spec[0];
     var desc = spec[1];
-    ~PATCH_BAY.registerSource(busName, ~SC_BUS[busName], \control, desc);
+    ~patch_bay.registerSource(busName, ~sc_bus[busName], \control, desc);
 });
 
 // Register function generator parameters as destinations
@@ -654,7 +654,7 @@ SynthDef(\hermetic_contour, {
     var synthName = moduleSpec[0];
     var params = moduleSpec[1];
     params.do({ |paramSpec|
-        ~PATCH_BAY.registerDestination(
+        ~patch_bay.registerDestination(
             (synthName.asString ++ "_" ++ paramSpec[0].asString).asSymbol,
             paramSpec[0],
             synthName.asString ++ " " ++ paramSpec[1]
@@ -665,9 +665,9 @@ SynthDef(\hermetic_contour, {
 // ==========================================
 // MODULE REGISTRY REGISTRATION — Hermetic Function Generators
 // ==========================================
-if(~MODULE_REGISTRY.notNil) {
+if(~module_registry.notNil) {
     // 1. HERMETIC DUAL — MATHS Clone (dual function gen + attenuverters)
-    ~MODULE_REGISTRY.register(\hermetic_dual, \makenoise, \hermetic_dual, [
+    ~module_registry.register(\hermetic_dual, \makenoise, \hermetic_dual, [
         (\name: \ch1_rise, \default: 0.1, \min: 0.001, \max: 25, \units: "s", \desc: "Ch1 rise time"),
         (\name: \ch1_fall, \default: 0.3, \min: 0.001, \max: 25, \units: "s", \desc: "Ch1 fall time"),
         (\name: \ch1_curve, \default: 0.0, \min: -8, \max: 8, \units: "", \desc: "Ch1 curve shape"),
@@ -684,10 +684,10 @@ if(~MODULE_REGISTRY.notNil) {
         (\name: \ch4_level, \default: 1.0, \min: 0, \max: 1, \units: "", \desc: "Ch4 output level"),
         (\name: \ch2_atten, \default: 0.5, \min: -1, \max: 1, \units: "", \desc: "Ch2 attenuverter"),
         (\name: \ch3_atten, \default: 0.5, \min: -1, \max: 1, \units: "", \desc: "Ch3 attenuverter"),
-    ], ~SC_GRP[\te], "MATHS clone: dual function gen + attenuverters, SUM/OR outputs");
+    ], ~sc_grp[\te], "MATHS clone: dual function gen + attenuverters, SUM/OR outputs");
 
     // 2. HERMETIC QUAD — PoliMATHS Clone (4-channel cascading function gen)
-    ~MODULE_REGISTRY.register(\hermetic_quad, \makenoise, \hermetic_quad, [
+    ~module_registry.register(\hermetic_quad, \makenoise, \hermetic_quad, [
         (\name: \chA_rise, \default: 0.1, \min: 0.001, \max: 25, \units: "s", \desc: "ChA rise time"),
         (\name: \chA_fall, \default: 0.3, \min: 0.001, \max: 25, \units: "s", \desc: "ChA fall time"),
         (\name: \chA_curve, \default: 0.0, \min: -8, \max: 8, \units: "", \desc: "ChA curve shape"),
@@ -720,10 +720,10 @@ if(~MODULE_REGISTRY.notNil) {
         (\name: \chD_fall_cv, \default: 0.0, \min: -1, \max: 1, \units: "", \desc: "ChD fall CV mod"),
         (\name: \chD_level, \default: 1.0, \min: 0, \max: 1, \units: "", \desc: "ChD output level"),
         (\name: \chD_cascade, \default: 0, \min: 0, \max: 1, \units: "", \desc: "ChD cascade enable"),
-    ], ~SC_GRP[\te], "PoliMATHS clone: 4-channel cascading function gen with circular trigger chain");
+    ], ~sc_grp[\te], "PoliMATHS clone: 4-channel cascading function gen with circular trigger chain");
 
     // 3. HERMETIC MONO — Function Clone (single channel function gen)
-    ~MODULE_REGISTRY.register(\hermetic_mono, \makenoise, \hermetic_mono, [
+    ~module_registry.register(\hermetic_mono, \makenoise, \hermetic_mono, [
         (\name: \rise, \default: 0.1, \min: 0.001, \max: 25, \units: "s", \desc: "Rise time"),
         (\name: \fall, \default: 0.3, \min: 0.001, \max: 25, \units: "s", \desc: "Fall time"),
         (\name: \curve, \default: 0.0, \min: -8, \max: 8, \units: "", \desc: "Curve shape"),
@@ -731,10 +731,10 @@ if(~MODULE_REGISTRY.notNil) {
         (\name: \level, \default: 1.0, \min: 0, \max: 1, \units: "", \desc: "Output level"),
         (\name: \rise_cv, \default: 0.0, \min: -1, \max: 1, \units: "", \desc: "Rise CV modulation"),
         (\name: \fall_cv, \default: 0.0, \min: -1, \max: 1, \units: "", \desc: "Fall CV modulation"),
-    ], ~SC_GRP[\te], "Function clone: single-channel rise/fall function generator");
+    ], ~sc_grp[\te], "Function clone: single-channel rise/fall function generator");
 
     // 4. HERMETIC CONTOUR — Contour Clone (ASR contour generator)
-    ~MODULE_REGISTRY.register(\hermetic_contour, \makenoise, \hermetic_contour, [
+    ~module_registry.register(\hermetic_contour, \makenoise, \hermetic_contour, [
         (\name: \attack, \default: 0.1, \min: 0.001, \max: 25, \units: "s", \desc: "Attack time"),
         (\name: \sustain_level, \default: 1.0, \min: 0, \max: 1, \units: "", \desc: "Sustain level"),
         (\name: \release, \default: 0.5, \min: 0.001, \max: 25, \units: "s", \desc: "Release time"),
@@ -743,6 +743,6 @@ if(~MODULE_REGISTRY.notNil) {
         (\name: \release_cv, \default: 0.0, \min: -1, \max: 1, \units: "", \desc: "Release CV modulation"),
         (\name: \shape_cv, \default: 0.0, \min: -1, \max: 1, \units: "", \desc: "Shape CV modulation"),
         (\name: \level, \default: 1.0, \min: 0, \max: 1, \units: "", \desc: "Output level"),
-    ], ~SC_GRP[\te], "Contour clone: ASR contour generator with voltage-controlled shape");
+    ], ~sc_grp[\te], "Contour clone: ASR contour generator with voltage-controlled shape");
 };
 )

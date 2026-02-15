@@ -3,7 +3,7 @@
   Complete load order for the Alchemical Synthesizer Meta-Rack
 
   CRITICAL: All file loads after 01_infrastructure.scd must happen
-  inside s.doWhenBooted to guarantee ~SC_GRP, ~SC_BUS, ~BRAHMA_REGISTRY
+  inside s.doWhenBooted to guarantee ~sc_grp, ~sc_bus, ~brahma_registry
   are initialized before dependent files execute.
 */
 
@@ -14,7 +14,7 @@ var root = thisProcess.nowExecutingPath.dirname;
 (root +/+ "01_infrastructure.scd").load;
 
 // Wait for server boot to complete before loading anything that
-// depends on ~SC_GRP, ~SC_BUS, ~BRAHMA_REGISTRY, etc.
+// depends on ~sc_grp, ~sc_bus, ~brahma_registry, etc.
 s.doWhenBooted({
 
     // === 01B: Arbitration Engine ===
@@ -127,9 +127,9 @@ s.doWhenBooted({
     (root +/+ "28_audio_sync.scd").load;
 
     // === 29: Deploy IMMUNE Governor (must be last in signal chain) ===
-    // Stereo IMMUNE on hardware outputs — final safety net
-    Synth(\immune_governor, [\inBus, 0, \outBus, 0, \threshold, 0.9], ~SC_GRP[\rr], \addToTail);
-    Synth(\immune_governor, [\inBus, 1, \outBus, 1, \threshold, 0.9], ~SC_GRP[\rr], \addToTail);
+    // Stereo IMMUNE on hardware outputs - final safety net
+    Synth(\immune_governor, [\inBus, 0, \outBus, 0, \threshold, 0.9], ~sc_grp[\rr], \addToTail);
+    Synth(\immune_governor, [\inBus, 1, \outBus, 1, \threshold, 0.9], ~sc_grp[\rr], \addToTail);
     "--- BRAHMA: IMMUNE Governor Deployed (stereo, threshold 0.9) ---".postln;
 
     // === 30: Demo Patch (generative hello-world) ===

@@ -9,7 +9,7 @@
 */
 
 (
-~DAEMON_CLOCK_BRIDGE = (
+~daemon_clock_bridge = (
     targets: IdentityDictionary.new,
 
     // Register a generative module with the clock bridge
@@ -135,25 +135,25 @@ OSCdef(\daemon_clock_register, { |msg|
 
     // Look up the instance from the appropriate registry
     var instance = switch(type,
-        \machina, { ~DAEMON_MACHINA_INSTANCES[name] },
-        \moirai, { ~MOIRAI_INSTANCES[name] },
-        \genesis, { ~GENESIS_INSTANCES[name] },
+        \machina, { ~daemon_machina_instances[name] },
+        \moirai, { ~moirai_instances[name] },
+        \genesis, { ~genesis_instances[name] },
         \arbor, {
-            var entry = ~DAEMON_SEQ_INSTANCES[name];
+            var entry = ~daemon_seq_instances[name];
             if(entry.notNil and: { entry[0] == \arbor }) { entry[1] } { nil };
         },
         \euclidean, {
-            var entry = ~DAEMON_SEQ_INSTANCES[name];
+            var entry = ~daemon_seq_instances[name];
             if(entry.notNil and: { entry[0] == \euclidean }) { entry[1] } { nil };
         },
         \probmatrix, {
-            var entry = ~DAEMON_SEQ_INSTANCES[name];
+            var entry = ~daemon_seq_instances[name];
             if(entry.notNil and: { entry[0] == \probmatrix }) { entry[1] } { nil };
         }
     );
 
     if(instance.notNil) {
-        ~DAEMON_CLOCK_BRIDGE.register(name, type, instance, division, cvBus, gateBus);
+        ~daemon_clock_bridge.register(name, type, instance, division, cvBus, gateBus);
     } {
         "DAEMON_CLOCK_BRIDGE: Instance '%' not found for type '%'".format(name, type).postln;
     };
@@ -161,19 +161,19 @@ OSCdef(\daemon_clock_register, { |msg|
 
 OSCdef(\daemon_clock_unregister, { |msg|
     var name = msg[1].asSymbol;
-    ~DAEMON_CLOCK_BRIDGE.unregister(name);
+    ~daemon_clock_bridge.unregister(name);
 }, "/daemon/clock/unregister");
 
 OSCdef(\daemon_clock_set_division, { |msg|
     var name = msg[1].asSymbol;
     var division = msg[2].asInteger;
-    ~DAEMON_CLOCK_BRIDGE.setDivision(name, division);
+    ~daemon_clock_bridge.setDivision(name, division);
 }, "/daemon/clock/division");
 
 OSCdef(\daemon_clock_toggle, { |msg|
     var name = msg[1].asSymbol;
     var active = msg[2].asInteger > 0;
-    ~DAEMON_CLOCK_BRIDGE.setActive(name, active);
+    ~daemon_clock_bridge.setActive(name, active);
 }, "/daemon/clock/toggle");
 
 "--- BRAHMA: DAEMON-CHRONOS Clock Bridge Online ---".postln;

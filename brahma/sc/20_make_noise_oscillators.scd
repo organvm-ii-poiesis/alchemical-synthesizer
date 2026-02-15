@@ -212,21 +212,21 @@ SynthDef(\harmonic_vessel, {
 
     sig = Select.ar(algorithm.clip(0, 2).round, [
         // 0: Classic additive (telharmonium tone wheels)
-        Mix.fill(numPartials.clip(1, 24), { |i|
+        Mix.fill(12, { |i|
             var harmFreq = freq * (i + 1);
             var amp = harmony.linlin(0, 1, 0.1, 1) / ((i + 1) ** (1 + (warp * 2)));
             SinOsc.ar(harmFreq.clip(20, 20000)) * amp;
         }) / 4,
 
         // 1: Noise-modulated additive
-        Mix.fill(numPartials.clip(1, 24), { |i|
+        Mix.fill(12, { |i|
             var harmFreq = freq * (i + 1) + (LFNoise1.kr(3) * warp * freq * 0.1);
             var amp = harmony / ((i + 1) ** 1.5);
             SinOsc.ar(harmFreq.clip(20, 20000)) * amp;
         }) / 4,
 
         // 2: Subharmonic series
-        Mix.fill(numPartials.clip(1, 24), { |i|
+        Mix.fill(12, { |i|
             var subFreq = freq / (i + 1);
             var amp = harmony / ((i + 1) ** (0.5 + warp));
             SinOsc.ar(subFreq.clip(20, 20000)) * amp;
@@ -272,7 +272,7 @@ SynthDef(\harmonic_vessel, {
     var synthName = moduleSpec[0];
     var params = moduleSpec[1];
     params.do({ |p|
-        ~PATCH_BAY.registerDestination(
+        ~patch_bay.registerDestination(
             (synthName.asString ++ "_" ++ p[0].asString).asSymbol,
             p[0], synthName.asString ++ " " ++ p[1]
         );
@@ -283,9 +283,9 @@ SynthDef(\harmonic_vessel, {
 // MODULE REGISTRY REGISTRATION — Make Noise Oscillators
 // ==========================================
 // --- MODULE REGISTRY REGISTRATION ---
-if(~MODULE_REGISTRY.notNil) {
+if(~module_registry.notNil) {
     // PRISMATIC_TWIN — DPO (Dual Prismatic Oscillator)
-    ~MODULE_REGISTRY.register(\prismatic_twin, \makenoise, \prismatic_twin, [
+    ~module_registry.register(\prismatic_twin, \makenoise, \prismatic_twin, [
         (\name: \outBus, \default: 0, \min: 0, \max: 127, \units: "", \desc: "Output bus"),
         (\name: \inBus, \default: 0, \min: 0, \max: 127, \units: "", \desc: "Input bus"),
         (\name: \gate, \default: 1, \min: 0, \max: 1, \units: "", \desc: "Gate"),
@@ -305,18 +305,18 @@ if(~MODULE_REGISTRY.notNil) {
         (\name: \followRatio, \default: 1.0, \min: 0.1, \max: 16, \units: "", \desc: "Follow frequency ratio"),
         (\name: \mixA, \default: 0.5, \min: 0, \max: 1, \units: "", \desc: "Oscillator A mix level"),
         (\name: \mixB, \default: 0.5, \min: 0, \max: 1, \units: "", \desc: "Oscillator B mix level")
-    ], ~SC_GRP[\te], "DPO: Dual Prismatic Oscillator with FM/AM/wavefold and strike input");
+    ], ~sc_grp[\te], "DPO: Dual Prismatic Oscillator with FM/AM/wavefold and strike input");
 
     // PRISMATIC_MONO — STO (Sub Timbral Oscillator)
-    ~MODULE_REGISTRY.register(\prismatic_mono, \makenoise, \prismatic_mono, [
+    ~module_registry.register(\prismatic_mono, \makenoise, \prismatic_mono, [
         (\name: \outBus, \default: 0, \min: 0, \max: 127, \units: "", \desc: "Main output bus"),
         (\name: \subOutBus, \default: 0, \min: 0, \max: 127, \units: "", \desc: "Sub oscillator output bus"),
         (\name: \freq, \default: 220, \min: 20, \max: 20000, \units: "Hz", \desc: "Frequency"),
         (\name: \shape, \default: 0.5, \min: 0, \max: 1, \units: "", \desc: "Waveshape (0=sin 0.5=tri 1=saw)")
-    ], ~SC_GRP[\te], "STO: Sub Timbral Oscillator with continuous waveshaping and sub output");
+    ], ~sc_grp[\te], "STO: Sub Timbral Oscillator with continuous waveshaping and sub output");
 
     // PRISMATIC_STEREO — XPO (Stereo Prismatic Oscillator)
-    ~MODULE_REGISTRY.register(\prismatic_stereo, \makenoise, \prismatic_stereo, [
+    ~module_registry.register(\prismatic_stereo, \makenoise, \prismatic_stereo, [
         (\name: \outBus, \default: 0, \min: 0, \max: 127, \units: "", \desc: "Output bus"),
         (\name: \freq, \default: 220, \min: 20, \max: 20000, \units: "Hz", \desc: "Base frequency"),
         (\name: \behavior, \default: 0, \min: 0, \max: 5, \units: "", \desc: "Behavior mode (0=indep 1=FM 2=AM 3=fold 4=sync 5=ring)"),
@@ -326,10 +326,10 @@ if(~MODULE_REGISTRY.notNil) {
         (\name: \shapeL, \default: 0, \min: 0, \max: 3, \units: "", \desc: "Left oscillator waveform"),
         (\name: \shapeR, \default: 0.5, \min: 0, \max: 3, \units: "", \desc: "Right oscillator waveform"),
         (\name: \spread, \default: 0.1, \min: 0, \max: 10, \units: "Hz", \desc: "Stereo frequency spread")
-    ], ~SC_GRP[\te], "XPO: Stereo Prismatic Oscillator with 6 behavior modes");
+    ], ~sc_grp[\te], "XPO: Stereo Prismatic Oscillator with 6 behavior modes");
 
     // PRISMATIC_MULTI — MultiWAVE
-    ~MODULE_REGISTRY.register(\prismatic_multi, \makenoise, \prismatic_multi, [
+    ~module_registry.register(\prismatic_multi, \makenoise, \prismatic_multi, [
         (\name: \outBusSin, \default: 0, \min: 0, \max: 127, \units: "", \desc: "Sine output bus"),
         (\name: \outBusTri, \default: 1, \min: 0, \max: 127, \units: "", \desc: "Triangle output bus"),
         (\name: \outBusSaw, \default: 2, \min: 0, \max: 127, \units: "", \desc: "Sawtooth output bus"),
@@ -337,10 +337,10 @@ if(~MODULE_REGISTRY.notNil) {
         (\name: \outBusSubSin, \default: 4, \min: 0, \max: 127, \units: "", \desc: "Sub sine output bus"),
         (\name: \outBusSubSq, \default: 5, \min: 0, \max: 127, \units: "", \desc: "Sub square output bus"),
         (\name: \freq, \default: 220, \min: 20, \max: 20000, \units: "Hz", \desc: "Base frequency")
-    ], ~SC_GRP[\te], "MultiWAVE: Multi-output waveform generator with 6 simultaneous outputs");
+    ], ~sc_grp[\te], "MultiWAVE: Multi-output waveform generator with 6 simultaneous outputs");
 
     // SPECTRAL_ORACLE — Spectraphon
-    ~MODULE_REGISTRY.register(\spectral_oracle, \makenoise, \spectral_oracle, [
+    ~module_registry.register(\spectral_oracle, \makenoise, \spectral_oracle, [
         (\name: \outBus, \default: 0, \min: 0, \max: 127, \units: "", \desc: "Output bus"),
         (\name: \inBus, \default: 0, \min: 0, \max: 127, \units: "", \desc: "Input bus for spectral analysis"),
         (\name: \freqA, \default: 220, \min: 20, \max: 20000, \units: "Hz", \desc: "Voice A frequency"),
@@ -353,10 +353,10 @@ if(~MODULE_REGISTRY.notNil) {
         (\name: \mixA, \default: 0.5, \min: 0, \max: 1, \units: "", \desc: "Voice A mix level"),
         (\name: \mixB, \default: 0.5, \min: 0, \max: 1, \units: "", \desc: "Voice B mix level"),
         (\name: \mix, \default: 0.5, \min: 0, \max: 1, \units: "", \desc: "Dry/wet mix")
-    ], ~SC_GRP[\te], "Spectraphon: Dual spectral oscillator with FFT analysis/resynthesis");
+    ], ~sc_grp[\te], "Spectraphon: Dual spectral oscillator with FFT analysis/resynthesis");
 
     // HARMONIC_VESSEL — tELHARMONIC
-    ~MODULE_REGISTRY.register(\harmonic_vessel, \makenoise, \harmonic_vessel, [
+    ~module_registry.register(\harmonic_vessel, \makenoise, \harmonic_vessel, [
         (\name: \outBus, \default: 0, \min: 0, \max: 127, \units: "", \desc: "Output bus"),
         (\name: \freq, \default: 220, \min: 20, \max: 20000, \units: "Hz", \desc: "Fundamental frequency"),
         (\name: \gate, \default: 1, \min: 0, \max: 1, \units: "", \desc: "Gate"),
@@ -364,6 +364,6 @@ if(~MODULE_REGISTRY.notNil) {
         (\name: \harmony, \default: 0.5, \min: 0, \max: 1, \units: "", \desc: "Harmonic content amount"),
         (\name: \warp, \default: 0, \min: 0, \max: 1, \units: "", \desc: "Spectral warping"),
         (\name: \numPartials, \default: 12, \min: 1, \max: 24, \units: "", \desc: "Number of partials")
-    ], ~SC_GRP[\te], "tELHARMONIC: Additive synthesis with 3 algorithms and spectral warping");
+    ], ~sc_grp[\te], "tELHARMONIC: Additive synthesis with 3 algorithms and spectral warping");
 };
 )

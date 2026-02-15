@@ -297,7 +297,7 @@ SynthDef(\alembic_diode, {
     var synthName = moduleSpec[0];
     var params = moduleSpec[1];
     params.do({ |p|
-        ~PATCH_BAY.registerDestination(
+        ~patch_bay.registerDestination(
             (synthName.asString ++ "_" ++ p[0].asString).asSymbol,
             p[0], synthName.asString ++ " " ++ p[1]
         );
@@ -307,37 +307,37 @@ SynthDef(\alembic_diode, {
 // ==========================================
 // MODULE REGISTRY REGISTRATION — Modular Filters
 // ==========================================
-if(~MODULE_REGISTRY.notNil) {
-    ~MODULE_REGISTRY.register(\alembic_ladder, \modular, \alembic_ladder, [
+if(~module_registry.notNil) {
+    ~module_registry.register(\alembic_ladder, \modular, \alembic_ladder, [
         (\name: \freq, \default: 1000, \min: 20, \max: 20000, \units: "Hz", \desc: "Cutoff frequency"),
         (\name: \res, \default: 0, \min: 0, \max: 1, \units: "", \desc: "Resonance (self-oscillation above ~0.875)"),
-    ], ~SC_GRP[\te], "Moog-style 4-pole ladder lowpass with self-oscillation");
+    ], ~sc_grp[\te], "Moog-style 4-pole ladder lowpass with self-oscillation");
 
-    ~MODULE_REGISTRY.register(\alembic_svf, \modular, \alembic_svf, [
+    ~module_registry.register(\alembic_svf, \modular, \alembic_svf, [
         (\name: \freq, \default: 1000, \min: 20, \max: 20000, \units: "Hz", \desc: "Cutoff frequency"),
         (\name: \res, \default: 0.5, \min: 0, \max: 1, \units: "", \desc: "Resonance"),
-    ], ~SC_GRP[\te], "State variable filter with simultaneous LP/HP/BP/Notch outputs");
+    ], ~sc_grp[\te], "State variable filter with simultaneous LP/HP/BP/Notch outputs");
 
-    ~MODULE_REGISTRY.register(\alembic_comb, \modular, \alembic_comb, [
+    ~module_registry.register(\alembic_comb, \modular, \alembic_comb, [
         (\name: \freq, \default: 220, \min: 20, \max: 20000, \units: "Hz", \desc: "Comb frequency (pitch-tracked delay)"),
         (\name: \feedback, \default: 0.5, \min: 0, \max: 0.99, \units: "", \desc: "Feedback amount"),
         (\name: \type, \default: 0, \min: 0, \max: 1, \units: "", \desc: "Polarity (0=positive, 1=negative)"),
-    ], ~SC_GRP[\te], "Pitch-tracked comb filter with selectable feedback polarity");
+    ], ~sc_grp[\te], "Pitch-tracked comb filter with selectable feedback polarity");
 
-    ~MODULE_REGISTRY.register(\alembic_allpass, \modular, \alembic_allpass, [
+    ~module_registry.register(\alembic_allpass, \modular, \alembic_allpass, [
         (\name: \freq, \default: 220, \min: 20, \max: 20000, \units: "Hz", \desc: "Center frequency for phase shift"),
         (\name: \decay, \default: 0.5, \min: 0, \max: 1, \units: "", \desc: "Decay time (0-1 mapped to 0.01-4s)"),
-    ], ~SC_GRP[\te], "Allpass filter for phase dispersion and diffusion effects");
+    ], ~sc_grp[\te], "Allpass filter for phase dispersion and diffusion effects");
 
-    ~MODULE_REGISTRY.register(\alembic_formant, \modular, \alembic_formant, [
+    ~module_registry.register(\alembic_formant, \modular, \alembic_formant, [
         (\name: \vowel, \default: 0, \min: 0, \max: 1, \units: "", \desc: "Vowel morph (0=A, 0.25=E, 0.5=I, 0.75=O, 1=U)"),
         (\name: \brightness, \default: 0.5, \min: 0, \max: 1, \units: "", \desc: "Higher formant presence"),
-    ], ~SC_GRP[\te], "Parallel resonator formant filter for vowel synthesis");
+    ], ~sc_grp[\te], "Parallel resonator formant filter for vowel synthesis");
 
-    ~MODULE_REGISTRY.register(\alembic_diode, \modular, \alembic_diode, [
+    ~module_registry.register(\alembic_diode, \modular, \alembic_diode, [
         (\name: \freq, \default: 1000, \min: 20, \max: 20000, \units: "Hz", \desc: "Cutoff frequency"),
         (\name: \res, \default: 0, \min: 0, \max: 1, \units: "", \desc: "Resonance"),
         (\name: \accent, \default: 0, \min: 0, \max: 1, \units: "", \desc: "Accent amount (boosts cutoff and resonance)"),
-    ], ~SC_GRP[\te], "Diode ladder 303-style filter with accent circuit");
+    ], ~sc_grp[\te], "Diode ladder 303-style filter with accent circuit");
 };
 )

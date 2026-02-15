@@ -120,7 +120,6 @@ SynthDef(\nigredo_multi, {
      loopStart=0, loopEnd=0|
 
     var levels, times, env;
-    var loopNode, releaseNode;
 
     levels = [
         level0.clip(0, 1), level1.clip(0, 1), level2.clip(0, 1),
@@ -138,26 +137,15 @@ SynthDef(\nigredo_multi, {
     loopStart = loopStart.clip(0, 7).round;
     loopEnd = loopEnd.clip(0, 7).round;
 
-    // Build envelope with optional loop and release nodes
-    // loopNode: where to loop back to while gate is held
-    // releaseNode: where to jump on gate release
-    loopNode = Select.kr((loopStart > 0) * (loopEnd > loopStart), [
-        -1,            // no loop
-        loopStart      // loop from this node
-    ]);
-
-    releaseNode = Select.kr((loopEnd > 0) * (loopEnd > loopStart), [
-        -1,            // no explicit release node
-        loopEnd        // release from this node
-    ]);
-
+    // SC's Env() requires compile-time integers for releaseNode/loopNode,
+    // so dynamic loop points via UGen args are not possible.
+    // Use a fixed sustain-at-node-7 envelope (release on gate off).
     env = EnvGen.kr(
         Env(
             levels,
             times,
             \lin,
-            releaseNode: if(loopEnd > loopStart, { loopEnd }, { -1 }),
-            loopNode: if(loopStart > 0, { loopStart }, { -1 })
+            releaseNode: 7  // sustain at node 7, release to node 8 on gate off
         ),
         gate,
         doneAction: 0
@@ -303,7 +291,7 @@ SynthDef(\nigredo_looping, {
     var synthName = moduleSpec[0];
     var params = moduleSpec[1];
     params.do({ |p|
-        ~PATCH_BAY.registerDestination(
+        ~patch_bay.registerDestination(
             (synthName.asString ++ "_" ++ p[0].asString).asSymbol,
             p[0], synthName.asString ++ " " ++ p[1]
         );
@@ -315,37 +303,37 @@ SynthDef(\nigredo_looping, {
 // ==========================================
 
 // --- MODULE REGISTRY REGISTRATION: NIGREDO_ADSR ---
-if(~MODULE_REGISTRY.notNil) {
-    ~MODULE_REGISTRY.register(\nigredo_adsr, \modular, \nigredo_adsr, [
+if(~module_registry.notNil) {
+    ~module_registry.register(\nigredo_adsr, \modular, \nigredo_adsr, [
         (\name: \atk, \default: 0.01, \min: 0.001, \max: 30, \units: "s", \desc: "Attack time"),
         (\name: \dec, \default: 0.3, \min: 0.001, \max: 30, \units: "s", \desc: "Decay time"),
         (\name: \sus, \default: 0.7, \min: 0, \max: 1, \units: "", \desc: "Sustain level"),
         (\name: \rel, \default: 0.3, \min: 0.001, \max: 30, \units: "s", \desc: "Release time"),
         (\name: \curve, \default: -4, \min: -8, \max: 8, \units: "", \desc: "Curve shape"),
-    ], ~SC_GRP[\te], "Standard ADSR envelope with configurable curve shape");
+    ], ~sc_grp[\te], "Standard ADSR envelope with configurable curve shape");
 };
 
 // --- MODULE REGISTRY REGISTRATION: NIGREDO_AD ---
-if(~MODULE_REGISTRY.notNil) {
-    ~MODULE_REGISTRY.register(\nigredo_ad, \modular, \nigredo_ad, [
+if(~module_registry.notNil) {
+    ~module_registry.register(\nigredo_ad, \modular, \nigredo_ad, [
         (\name: \atk, \default: 0.01, \min: 0.001, \max: 30, \units: "s", \desc: "Attack time"),
         (\name: \dec, \default: 0.3, \min: 0.001, \max: 30, \units: "s", \desc: "Decay time"),
         (\name: \curve, \default: -4, \min: -8, \max: 8, \units: "", \desc: "Curve shape"),
-    ], ~SC_GRP[\te], "Trigger-mode attack-decay envelope for percussive transients");
+    ], ~sc_grp[\te], "Trigger-mode attack-decay envelope for percussive transients");
 };
 
 // --- MODULE REGISTRY REGISTRATION: NIGREDO_AR ---
-if(~MODULE_REGISTRY.notNil) {
-    ~MODULE_REGISTRY.register(\nigredo_ar, \modular, \nigredo_ar, [
+if(~module_registry.notNil) {
+    ~module_registry.register(\nigredo_ar, \modular, \nigredo_ar, [
         (\name: \atk, \default: 0.01, \min: 0.001, \max: 30, \units: "s", \desc: "Attack time"),
         (\name: \rel, \default: 0.3, \min: 0.001, \max: 30, \units: "s", \desc: "Release time"),
         (\name: \curve, \default: -4, \min: -8, \max: 8, \units: "", \desc: "Curve shape"),
-    ], ~SC_GRP[\te], "Gate-mode attack-release envelope for organ-style articulation");
+    ], ~sc_grp[\te], "Gate-mode attack-release envelope for organ-style articulation");
 };
 
 // --- MODULE REGISTRY REGISTRATION: NIGREDO_MULTI ---
-if(~MODULE_REGISTRY.notNil) {
-    ~MODULE_REGISTRY.register(\nigredo_multi, \modular, \nigredo_multi, [
+if(~module_registry.notNil) {
+    ~module_registry.register(\nigredo_multi, \modular, \nigredo_multi, [
         (\name: \level0, \default: 0, \min: 0, \max: 1, \units: "", \desc: "Segment 0 level (start)"),
         (\name: \level1, \default: 1, \min: 0, \max: 1, \units: "", \desc: "Segment 1 level"),
         (\name: \level2, \default: 0.7, \min: 0, \max: 1, \units: "", \desc: "Segment 2 level"),
@@ -365,25 +353,25 @@ if(~MODULE_REGISTRY.notNil) {
         (\name: \time7, \default: 0.1, \min: 0.001, \max: 30, \units: "s", \desc: "Segment 7-8 time"),
         (\name: \loopStart, \default: 0, \min: 0, \max: 7, \units: "", \desc: "Loop start segment"),
         (\name: \loopEnd, \default: 0, \min: 0, \max: 7, \units: "", \desc: "Loop end segment"),
-    ], ~SC_GRP[\te], "Multi-stage envelope with up to 8 segments and optional loop region");
+    ], ~sc_grp[\te], "Multi-stage envelope with up to 8 segments and optional loop region");
 };
 
 // --- MODULE REGISTRY REGISTRATION: NIGREDO_FUNCTION ---
-if(~MODULE_REGISTRY.notNil) {
-    ~MODULE_REGISTRY.register(\nigredo_function, \modular, \nigredo_function, [
+if(~module_registry.notNil) {
+    ~module_registry.register(\nigredo_function, \modular, \nigredo_function, [
         (\name: \rise, \default: 0.1, \min: 0.001, \max: 25, \units: "s", \desc: "Rise time"),
         (\name: \fall, \default: 0.3, \min: 0.001, \max: 25, \units: "s", \desc: "Fall time"),
         (\name: \shape, \default: 0, \min: -8, \max: 8, \units: "", \desc: "Curve shape"),
         (\name: \cycle, \default: 0, \min: 0, \max: 1, \units: "", \desc: "Cycle mode (0=one-shot, 1=loop)"),
-    ], ~SC_GRP[\te], "MATHS-style function generator with rise/fall/cycle and EOR/EOC triggers");
+    ], ~sc_grp[\te], "MATHS-style function generator with rise/fall/cycle and EOR/EOC triggers");
 };
 
 // --- MODULE REGISTRY REGISTRATION: NIGREDO_LOOPING ---
-if(~MODULE_REGISTRY.notNil) {
-    ~MODULE_REGISTRY.register(\nigredo_looping, \modular, \nigredo_looping, [
+if(~module_registry.notNil) {
+    ~module_registry.register(\nigredo_looping, \modular, \nigredo_looping, [
         (\name: \atk, \default: 0.01, \min: 0.001, \max: 30, \units: "s", \desc: "Attack time"),
         (\name: \rel, \default: 0.3, \min: 0.001, \max: 30, \units: "s", \desc: "Release time"),
         (\name: \loop, \default: 0, \min: 0, \max: 1, \units: "", \desc: "Loop enable (0=off, 1=on)"),
-    ], ~SC_GRP[\te], "Looping AR envelope with auto-retrigger for envelope-shaped LFO");
+    ], ~sc_grp[\te], "Looping AR envelope with auto-retrigger for envelope-shaped LFO");
 };
 )

@@ -5,21 +5,22 @@
 */
 
 (
-~CHRONOS_TRACKS = (
+~chronos_tracks = (
 
     // ==========================================
     // TRACK CREATION
     // ==========================================
     // Track types: \note, \drum, \cv, \gate, \chord, \arpeggio, \midi
     createTrack: { |self, type=\note, numSteps=16, division=16, name=""|
-        var trackIdx = ~CHRONOS[\numActiveTracks];
+        var trackIdx = ~chronos[\numActiveTracks];
+        var track;
 
-        if(trackIdx >= ~CHRONOS[\maxTracks]) {
-            "CHRONOS: Maximum tracks (%) reached".format(~CHRONOS[\maxTracks]).warn;
+        if(trackIdx >= ~chronos[\maxTracks]) {
+            "CHRONOS: Maximum tracks (%) reached".format(~chronos[\maxTracks]).warn;
             ^nil;
         };
 
-        var track = (
+        track = (
             id: trackIdx,
             name: if(name.size > 0, name, "Track " ++ (trackIdx + 1)),
             type: type.asSymbol,
@@ -30,10 +31,10 @@
             swing: 0.0,
 
             // Target (which synth/organism to trigger)
-            targetName: nil,   // Key in ~CHRONOS[\targets]
+            targetName: nil,   // Key in ~chronos[\targets]
             targetSynthDef: \drum_subtractive,
             targetOutBus: 0,
-            targetGroup: ~SC_GRP[\te],
+            targetGroup: ~sc_grp[\te],
 
             // Base synth args (overridden by p-locks)
             synthArgs: Dictionary.new,
@@ -80,8 +81,8 @@
             midiCCMap: nil          // Dictionary of step -> [cc#, value] for CC automation
         );
 
-        ~CHRONOS[\tracks] = ~CHRONOS[\tracks].add(track);
-        ~CHRONOS[\numActiveTracks] = ~CHRONOS[\numActiveTracks] + 1;
+        ~chronos[\tracks] = ~chronos[\tracks].add(track);
+        ~chronos[\numActiveTracks] = ~chronos[\numActiveTracks] + 1;
 
         "CHRONOS: Track % created (%, % steps, /%)"
             .format(trackIdx, type, numSteps, division).postln;
@@ -102,8 +103,8 @@
 
     // Delete a track
     deleteTrack: { |self, trackIdx|
-        if(trackIdx < ~CHRONOS[\tracks].size and: { ~CHRONOS[\tracks][trackIdx].notNil }) {
-            ~CHRONOS[\tracks][trackIdx][\active] = false;
+        if(trackIdx < ~chronos[\tracks].size and: { ~chronos[\tracks][trackIdx].notNil }) {
+            ~chronos[\tracks][trackIdx][\active] = false;
             "CHRONOS: Track % deactivated".format(trackIdx).postln;
         };
     },
@@ -123,17 +124,20 @@
         // A:B patterns — trigger on Ath pass out of every B passes
         { condition == \oneOfTwo } { (track[\currentStep].div(track[\numSteps]) % 2) == 0 }
         { condition == \twoOfThree } {
-            var pass = track[\currentStep].div(track[\numSteps]) % 3;
+            var pass;
+            pass = track[\currentStep].div(track[\numSteps]) % 3;
             (pass == 0) or: { pass == 1 };
         }
         { condition == \threeOfFour } {
-            var pass = track[\currentStep].div(track[\numSteps]) % 4;
+            var pass;
+            pass = track[\currentStep].div(track[\numSteps]) % 4;
             pass < 3;
         }
         { condition == \oneOfThree } { (track[\currentStep].div(track[\numSteps]) % 3) == 0 }
         { condition == \oneOfFour } { (track[\currentStep].div(track[\numSteps]) % 4) == 0 }
         { condition == \twoOfFour } {
-            var pass = track[\currentStep].div(track[\numSteps]) % 4;
+            var pass;
+            pass = track[\currentStep].div(track[\numSteps]) % 4;
             (pass == 0) or: { pass == 1 };
         }
         // Default: always trigger
@@ -144,17 +148,18 @@
     // STEP TRIGGERING
     // ==========================================
     triggerStep: { |self, trackIdx, step|
-        var track = ~CHRONOS[\tracks][trackIdx];
+        var track = ~chronos[\tracks][trackIdx];
+        var stepData, target, synthDef, outBus, group, args;
         if(track.isNil or: { track[\active].not }) { ^nil };
 
-        var stepData = track[\pattern][step];
-        var target = ~CHRONOS[\targets][track[\targetName]];
-        var synthDef = if(target.notNil) { target[\synthDef] } { track[\targetSynthDef] };
-        var outBus = if(target.notNil) { target[\outBus] } { track[\targetOutBus] };
-        var group = if(target.notNil) { target[\group] } { track[\targetGroup] };
+        stepData = track[\pattern][step];
+        target = ~chronos[\targets][track[\targetName]];
+        synthDef = if(target.notNil) { target[\synthDef] } { track[\targetSynthDef] };
+        outBus = if(target.notNil) { target[\outBus] } { track[\targetOutBus] };
+        group = if(target.notNil) { target[\group] } { track[\targetGroup] };
 
         // Build synth args from base + p-locks
-        var args = track[\synthArgs].copy;
+        args = track[\synthArgs].copy;
         if(stepData[\pLocks].notNil) {
             stepData[\pLocks].keysValuesDo({ |k, v|
                 args[k] = v;
@@ -164,12 +169,12 @@
         // Frequency calculation based on track type
         case
         { track[\type] == \note or: { track[\type] == \drum } } {
-            var note = stepData[\note] + stepData[\transpose];
-            var freq;
+            var note, freq;
+            note = stepData[\note] + stepData[\transpose];
 
             // Use microtonal system if available
-            if(~BRAHMA_TUNING[\currentScale].notNil) {
-                freq = ~BRAHMA_TUNING.degreeToFreq(note - 60, 4);
+            if(~brahma_tuning[\currentScale].notNil) {
+                freq = ~brahma_tuning.degreeToFreq(note - 60, 4);
             } {
                 freq = note.midicps;
             };
@@ -183,16 +188,17 @@
         }
         { track[\type] == \chord } {
             // Trigger multiple notes simultaneously
-            var notes = track[\chordVoicings] !? { |cv| cv[step] } ?? [stepData[\note]];
+            var notes;
+            notes = track[\chordVoicings] !? { |cv| cv[step] } ?? [stepData[\note]];
             notes.do({ |note|
-                var freq;
+                var freq, chordArgs;
                 note = note + stepData[\transpose];
-                if(~BRAHMA_TUNING[\currentScale].notNil) {
-                    freq = ~BRAHMA_TUNING.degreeToFreq(note - 60, 4);
+                if(~brahma_tuning[\currentScale].notNil) {
+                    freq = ~brahma_tuning.degreeToFreq(note - 60, 4);
                 } {
                     freq = note.midicps;
                 };
-                var chordArgs = args.copy;
+                chordArgs = args.copy;
                 chordArgs[\freq] = freq;
                 chordArgs[\gate] = 1;
                 chordArgs[\velocity] = stepData[\velocity] / 127;
@@ -210,7 +216,7 @@
             // Output gate pulse to control bus
             if(track[\audioBus].notNil) {
                 track[\audioBus].set(1);
-                SystemClock.sched(stepData[\length] * 60 / ~CHRONOS[\tempo] / 96, {
+                SystemClock.sched(stepData[\length] * 60 / ~chronos[\tempo] / 96, {
                     track[\audioBus].set(0);
                     nil;
                 });
@@ -218,11 +224,12 @@
         }
         { track[\type] == \midi } {
             // Send MIDI note to external device
-            var port = track[\midiPort] ?? { ~BRAHMA_MIDI[\defaultOut] };
-            var ch = track[\midiChannel].clip(0, 15);
-            var note = stepData[\note] + stepData[\transpose];
-            var vel = stepData[\velocity].clip(0, 127);
-            var dur = stepData[\length] * 60 / ~CHRONOS[\tempo] / 96;
+            var port, ch, note, vel, dur;
+            port = track[\midiPort] ?? { ~brahma_midi[\defaultOut] };
+            ch = track[\midiChannel].clip(0, 15);
+            note = stepData[\note] + stepData[\transpose];
+            vel = stepData[\velocity].clip(0, 127);
+            dur = stepData[\length] * 60 / ~chronos[\tempo] / 96;
 
             if(port.notNil) {
                 // Send note on
@@ -236,7 +243,8 @@
 
                 // Send CC automation from p-locks if present
                 if(track[\midiCCMap].notNil) {
-                    var ccData = track[\midiCCMap][step];
+                    var ccData;
+                    ccData = track[\midiCCMap][step];
                     if(ccData.notNil) {
                         ccData.keysValuesDo({ |ccNum, ccVal|
                             port.control(ch, ccNum.asInteger, ccVal.asInteger.clip(0, 127));
@@ -247,9 +255,10 @@
                 // Also send any CC p-locks from the step
                 if(stepData[\pLocks].notNil) {
                     stepData[\pLocks].keysValuesDo({ |k, v|
-                        var key = k.asString;
+                        var key, ccNum;
+                        key = k.asString;
                         if(key.beginsWith("cc")) {
-                            var ccNum = key[2..].asInteger;
+                            ccNum = key[2..].asInteger;
                             port.control(ch, ccNum.clip(0, 127), v.asInteger.clip(0, 127));
                         };
                     });
@@ -258,7 +267,7 @@
         };
 
         // Broadcast trigger to Visual Cortex
-        ~VISUAL_CORTEX.target.sendMsg("/chronos/trigger",
+        ~visual_cortex.target.sendMsg("/chronos/trigger",
             trackIdx, step, stepData[\velocity]);
     },
 
@@ -266,64 +275,64 @@
     // PATTERN EDITING
     // ==========================================
     toggleStep: { |self, trackIdx, step|
-        var track = ~CHRONOS[\tracks][trackIdx];
+        var track = ~chronos[\tracks][trackIdx];
         if(track.notNil) {
-            ~CHRONOS.pushUndoState;
+            ~chronos.pushUndoState;
             track[\pattern][step][\active] = track[\pattern][step][\active].not;
         };
     },
 
     setStepNote: { |self, trackIdx, step, note|
-        var track = ~CHRONOS[\tracks][trackIdx];
+        var track = ~chronos[\tracks][trackIdx];
         if(track.notNil) {
             track[\pattern][step][\note] = note.clip(0, 127);
         };
     },
 
     setStepVelocity: { |self, trackIdx, step, vel|
-        var track = ~CHRONOS[\tracks][trackIdx];
+        var track = ~chronos[\tracks][trackIdx];
         if(track.notNil) {
             track[\pattern][step][\velocity] = vel.clip(0, 127);
         };
     },
 
     setStepLength: { |self, trackIdx, step, length|
-        var track = ~CHRONOS[\tracks][trackIdx];
+        var track = ~chronos[\tracks][trackIdx];
         if(track.notNil) {
             track[\pattern][step][\length] = length.clip(1, 128);
         };
     },
 
     setStepProbability: { |self, trackIdx, step, prob|
-        var track = ~CHRONOS[\tracks][trackIdx];
+        var track = ~chronos[\tracks][trackIdx];
         if(track.notNil) {
             track[\pattern][step][\probability] = prob.clip(0, 100);
         };
     },
 
     setStepCondition: { |self, trackIdx, step, condition|
-        var track = ~CHRONOS[\tracks][trackIdx];
+        var track = ~chronos[\tracks][trackIdx];
         if(track.notNil) {
             track[\pattern][step][\condition] = condition.asSymbol;
         };
     },
 
     setStepMicroTiming: { |self, trackIdx, step, offset|
-        var track = ~CHRONOS[\tracks][trackIdx];
+        var track = ~chronos[\tracks][trackIdx];
         if(track.notNil) {
             track[\pattern][step][\microTiming] = offset.clip(-50, 50);
         };
     },
 
     setStepRatchet: { |self, trackIdx, step, count|
-        var track = ~CHRONOS[\tracks][trackIdx];
+        var track = ~chronos[\tracks][trackIdx];
         if(track.notNil) {
             track[\pattern][step][\ratchet] = count.clip(1, 8);
         };
     },
 
     setStepTranspose: { |self, trackIdx, step, semitones|
-        var track = ~CHRONOS[\tracks][trackIdx];
+        var track = ~chronos[\tracks][trackIdx];
         if(track.notNil) {
             track[\pattern][step][\transpose] = semitones.clip(-48, 48);
         };
@@ -331,7 +340,7 @@
 
     // Parameter lock (any param on a specific step)
     setStepPLock: { |self, trackIdx, step, param, value|
-        var track = ~CHRONOS[\tracks][trackIdx];
+        var track = ~chronos[\tracks][trackIdx];
         if(track.notNil) {
             if(track[\pattern][step][\pLocks].isNil) {
                 track[\pattern][step][\pLocks] = Dictionary.new;
@@ -341,7 +350,7 @@
     },
 
     clearStepPLock: { |self, trackIdx, step, param|
-        var track = ~CHRONOS[\tracks][trackIdx];
+        var track = ~chronos[\tracks][trackIdx];
         if(track.notNil and: { track[\pattern][step][\pLocks].notNil }) {
             track[\pattern][step][\pLocks].removeAt(param.asSymbol);
             if(track[\pattern][step][\pLocks].isEmpty) {
@@ -356,7 +365,7 @@
     clipboard: nil,
 
     copyPattern: { |self, trackIdx|
-        var track = ~CHRONOS[\tracks][trackIdx];
+        var track = ~chronos[\tracks][trackIdx];
         if(track.notNil) {
             self[\clipboard] = track[\pattern].deepCopy;
             "CHRONOS: Track % pattern copied".format(trackIdx).postln;
@@ -364,9 +373,9 @@
     },
 
     pastePattern: { |self, trackIdx|
-        var track = ~CHRONOS[\tracks][trackIdx];
+        var track = ~chronos[\tracks][trackIdx];
         if(track.notNil and: { self[\clipboard].notNil }) {
-            ~CHRONOS.pushUndoState;
+            ~chronos.pushUndoState;
             track[\pattern] = self[\clipboard].deepCopy;
             "CHRONOS: Pattern pasted to track %".format(trackIdx).postln;
         };
@@ -374,7 +383,7 @@
 
     // Copy a range of steps
     copyStepRange: { |self, trackIdx, startStep, endStep|
-        var track = ~CHRONOS[\tracks][trackIdx];
+        var track = ~chronos[\tracks][trackIdx];
         if(track.notNil) {
             self[\clipboard] = track[\pattern].copyRange(startStep, endStep).deepCopy;
         };
@@ -384,8 +393,8 @@
     // TRACK CONFIGURATION
     // ==========================================
     setTrackTarget: { |self, trackIdx, targetName|
-        var track = ~CHRONOS[\tracks][trackIdx];
-        var target = ~CHRONOS[\targets][targetName.asSymbol];
+        var track = ~chronos[\tracks][trackIdx];
+        var target = ~chronos[\targets][targetName.asSymbol];
         if(track.notNil and: { target.notNil }) {
             track[\targetName] = targetName.asSymbol;
             track[\targetSynthDef] = target[\synthDef];
@@ -396,16 +405,17 @@
     },
 
     setTrackDivision: { |self, trackIdx, division|
-        var track = ~CHRONOS[\tracks][trackIdx];
+        var track = ~chronos[\tracks][trackIdx];
         if(track.notNil) {
             track[\division] = division.clip(1, 64);
         };
     },
 
     setTrackSteps: { |self, trackIdx, numSteps|
-        var track = ~CHRONOS[\tracks][trackIdx];
+        var track = ~chronos[\tracks][trackIdx];
         if(track.notNil) {
-            var oldSteps = track[\numSteps];
+            var oldSteps;
+            oldSteps = track[\numSteps];
             numSteps = numSteps.clip(1, 128);
             if(numSteps > oldSteps) {
                 // Extend pattern
@@ -422,14 +432,14 @@
     },
 
     muteTrack: { |self, trackIdx|
-        var track = ~CHRONOS[\tracks][trackIdx];
+        var track = ~chronos[\tracks][trackIdx];
         if(track.notNil) {
             track[\muted] = track[\muted].not;
         };
     },
 
     soloTrack: { |self, trackIdx|
-        var track = ~CHRONOS[\tracks][trackIdx];
+        var track = ~chronos[\tracks][trackIdx];
         if(track.notNil) {
             track[\solo] = track[\solo].not;
         };
@@ -439,7 +449,7 @@
     // MIDI TRACK CONFIGURATION
     // ==========================================
     setTrackMidiChannel: { |self, trackIdx, channel|
-        var track = ~CHRONOS[\tracks][trackIdx];
+        var track = ~chronos[\tracks][trackIdx];
         if(track.notNil and: { track[\type] == \midi }) {
             track[\midiChannel] = channel.clip(0, 15);
             "CHRONOS: Track % MIDI channel = %".format(trackIdx, channel).postln;
@@ -447,16 +457,17 @@
     },
 
     setTrackMidiPort: { |self, trackIdx, portIndex|
-        var track = ~CHRONOS[\tracks][trackIdx];
+        var track = ~chronos[\tracks][trackIdx];
         if(track.notNil and: { track[\type] == \midi }) {
-            var out = MIDIOut(portIndex.clip(0, 15));
+            var out;
+            out = MIDIOut(portIndex.clip(0, 15));
             track[\midiPort] = out;
             "CHRONOS: Track % MIDI port = %".format(trackIdx, portIndex).postln;
         };
     },
 
     setStepMidiCC: { |self, trackIdx, step, ccNum, ccVal|
-        var track = ~CHRONOS[\tracks][trackIdx];
+        var track = ~chronos[\tracks][trackIdx];
         if(track.notNil and: { track[\type] == \midi }) {
             if(track[\midiCCMap].isNil) {
                 track[\midiCCMap] = Dictionary.new;
@@ -476,87 +487,87 @@ OSCdef(\chronos_track_create, { |msg|
     var type = msg[1] !? _.asSymbol ?? \note;
     var steps = msg[2] !? _.asInteger ?? 16;
     var div = msg[3] !? _.asInteger ?? 16;
-    ~CHRONOS_TRACKS.createTrack(type, steps, div);
+    ~chronos_tracks.createTrack(type, steps, div);
 }, "/chronos/track/create");
 
 OSCdef(\chronos_track_target, { |msg|
-    ~CHRONOS_TRACKS.setTrackTarget(msg[1].asInteger, msg[2].asString);
+    ~chronos_tracks.setTrackTarget(msg[1].asInteger, msg[2].asString);
 }, "/chronos/track/target");
 
 OSCdef(\chronos_track_div, { |msg|
-    ~CHRONOS_TRACKS.setTrackDivision(msg[1].asInteger, msg[2].asInteger);
+    ~chronos_tracks.setTrackDivision(msg[1].asInteger, msg[2].asInteger);
 }, "/chronos/track/division");
 
 OSCdef(\chronos_track_steps, { |msg|
-    ~CHRONOS_TRACKS.setTrackSteps(msg[1].asInteger, msg[2].asInteger);
+    ~chronos_tracks.setTrackSteps(msg[1].asInteger, msg[2].asInteger);
 }, "/chronos/track/steps");
 
 OSCdef(\chronos_track_mute, { |msg|
-    ~CHRONOS_TRACKS.muteTrack(msg[1].asInteger);
+    ~chronos_tracks.muteTrack(msg[1].asInteger);
 }, "/chronos/track/mute");
 
 OSCdef(\chronos_track_solo, { |msg|
-    ~CHRONOS_TRACKS.soloTrack(msg[1].asInteger);
+    ~chronos_tracks.soloTrack(msg[1].asInteger);
 }, "/chronos/track/solo");
 
 // Step editing OSC
 OSCdef(\chronos_step_toggle, { |msg|
-    ~CHRONOS_TRACKS.toggleStep(msg[1].asInteger, msg[2].asInteger);
+    ~chronos_tracks.toggleStep(msg[1].asInteger, msg[2].asInteger);
 }, "/chronos/step/toggle");
 
 OSCdef(\chronos_step_note, { |msg|
-    ~CHRONOS_TRACKS.setStepNote(msg[1].asInteger, msg[2].asInteger, msg[3].asInteger);
+    ~chronos_tracks.setStepNote(msg[1].asInteger, msg[2].asInteger, msg[3].asInteger);
 }, "/chronos/step/note");
 
 OSCdef(\chronos_step_vel, { |msg|
-    ~CHRONOS_TRACKS.setStepVelocity(msg[1].asInteger, msg[2].asInteger, msg[3].asInteger);
+    ~chronos_tracks.setStepVelocity(msg[1].asInteger, msg[2].asInteger, msg[3].asInteger);
 }, "/chronos/step/velocity");
 
 OSCdef(\chronos_step_prob, { |msg|
-    ~CHRONOS_TRACKS.setStepProbability(msg[1].asInteger, msg[2].asInteger, msg[3].asInteger);
+    ~chronos_tracks.setStepProbability(msg[1].asInteger, msg[2].asInteger, msg[3].asInteger);
 }, "/chronos/step/probability");
 
 OSCdef(\chronos_step_cond, { |msg|
-    ~CHRONOS_TRACKS.setStepCondition(msg[1].asInteger, msg[2].asInteger, msg[3]);
+    ~chronos_tracks.setStepCondition(msg[1].asInteger, msg[2].asInteger, msg[3]);
 }, "/chronos/step/condition");
 
 OSCdef(\chronos_step_micro, { |msg|
-    ~CHRONOS_TRACKS.setStepMicroTiming(msg[1].asInteger, msg[2].asInteger, msg[3].asFloat);
+    ~chronos_tracks.setStepMicroTiming(msg[1].asInteger, msg[2].asInteger, msg[3].asFloat);
 }, "/chronos/step/microTiming");
 
 OSCdef(\chronos_step_ratchet, { |msg|
-    ~CHRONOS_TRACKS.setStepRatchet(msg[1].asInteger, msg[2].asInteger, msg[3].asInteger);
+    ~chronos_tracks.setStepRatchet(msg[1].asInteger, msg[2].asInteger, msg[3].asInteger);
 }, "/chronos/step/ratchet");
 
 OSCdef(\chronos_step_plock, { |msg|
-    ~CHRONOS_TRACKS.setStepPLock(msg[1].asInteger, msg[2].asInteger, msg[3], msg[4].asFloat);
+    ~chronos_tracks.setStepPLock(msg[1].asInteger, msg[2].asInteger, msg[3], msg[4].asFloat);
 }, "/chronos/step/plock");
 
-OSCdef(\chronos_copy, { |msg| ~CHRONOS_TRACKS.copyPattern(msg[1].asInteger) }, "/chronos/copy");
-OSCdef(\chronos_paste, { |msg| ~CHRONOS_TRACKS.pastePattern(msg[1].asInteger) }, "/chronos/paste");
+OSCdef(\chronos_copy, { |msg| ~chronos_tracks.copyPattern(msg[1].asInteger) }, "/chronos/copy");
+OSCdef(\chronos_paste, { |msg| ~chronos_tracks.pastePattern(msg[1].asInteger) }, "/chronos/paste");
 
 // MIDI track configuration
 OSCdef(\chronos_midi_channel, { |msg|
-    ~CHRONOS_TRACKS.setTrackMidiChannel(msg[1].asInteger, msg[2].asInteger);
+    ~chronos_tracks.setTrackMidiChannel(msg[1].asInteger, msg[2].asInteger);
 }, "/chronos/track/midi/channel");
 
 OSCdef(\chronos_midi_port, { |msg|
-    ~CHRONOS_TRACKS.setTrackMidiPort(msg[1].asInteger, msg[2].asInteger);
+    ~chronos_tracks.setTrackMidiPort(msg[1].asInteger, msg[2].asInteger);
 }, "/chronos/track/midi/port");
 
 OSCdef(\chronos_midi_cc, { |msg|
-    ~CHRONOS_TRACKS.setStepMidiCC(
+    ~chronos_tracks.setStepMidiCC(
         msg[1].asInteger, msg[2].asInteger,
         msg[3].asInteger, msg[4].asInteger);
 }, "/chronos/step/midi/cc");
 
 // Golem legacy step aliases
 OSCdef(\golem_step_toggle_alias, { |msg|
-    ~CHRONOS_TRACKS.toggleStep(msg[1].asInteger, msg[2].asInteger);
+    ~chronos_tracks.toggleStep(msg[1].asInteger, msg[2].asInteger);
 }, "/golem/step/toggle");
 
 OSCdef(\golem_step_vel_alias, { |msg|
-    ~CHRONOS_TRACKS.setStepVelocity(msg[1].asInteger, msg[2].asInteger, (msg[3].asFloat * 127).asInteger);
+    ~chronos_tracks.setStepVelocity(msg[1].asInteger, msg[2].asInteger, (msg[3].asFloat * 127).asInteger);
 }, "/golem/step/velocity");
 
 "--- BRAHMA: CHRONOS Track Manager Online ---".postln;

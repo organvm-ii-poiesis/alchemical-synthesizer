@@ -205,18 +205,18 @@ SynthDef(\golem_pr, {
     // Reflection signals
     inv = in.neg * prReflectMix.clip(0, 1);
     ring = (in * SinOsc.ar(200 + (tone * 800))) * prReflectMix.clip(0, 1);
-    reflect = Select.ar(prMode.clip(0, 3), [0, inv, ring, 0]);
+    reflect = Select.ar(prMode.clip(0, 3), [DC.ar(0), inv, ring, DC.ar(0)]);
 
-    fault = Latch.kr((prMode.clip(0, 3) == 3) * overGate, 1);
+    fault = Latch.kr(((prMode.clip(0, 3) - 3).abs < 0.5) * overGate, 1);
     Out.kr(prFaultBus, fault);
 
-    trig = (prMode.clip(0, 3) == 0) * overGate;
+    trig = (prMode.clip(0, 3) < 0.5) * overGate;
 
     out = Select.ar(prMode.clip(0, 3), [
         (in * (1 - trig)).lag(0.01),           // SACRIFICE
         Limiter.ar(in, 0.98, 0.02),            // INVERT
         Limiter.ar(in, 0.98, 0.02),            // RING
-        Select.ar(fault, [Limiter.ar(in, 0.98, 0.02), 0])  // MUTE
+        Select.ar(fault, [Limiter.ar(in, 0.98, 0.02), DC.ar(0)])  // MUTE
     ]);
 
     Out.ar(reflectBus, reflect);
@@ -249,7 +249,7 @@ SynthDef(\golem_rr, {
 // ==========================================
 // GOLEM LANGUAGE-SIDE CONTROLLER
 // ==========================================
-~GOLEM = (
+~golem = (
     entityId: 2001,
     type: "Golem",
     equipState: \idle,     // \idle, \equipped, \absorbing
@@ -288,7 +288,7 @@ SynthDef(\golem_rr, {
             )
         );
 
-        ~BRAHMA_REGISTRY.registerEntity(self.entityId, self.type, traitMap);
+        ~brahma_registry.registerEntity(self.entityId, self.type, traitMap);
         "GOLEM: Registered as entity % with AdamKadmon".format(self.entityId).postln;
     },
 
@@ -297,28 +297,28 @@ SynthDef(\golem_rr, {
     // ==========================================
     allocate: { |self|
         // Per-track audio buses (voice output + FX chain)
-        ~GOLEM_SEQ.tracks.do({ |track, i|
+        ~golem_seq.tracks.do({ |track, i|
             track[\audioBus] = Bus.audio(s, 1);
             track[\fxBus] = Bus.audio(s, 1);
-            ~SC_BUS.put(("golem_audio_" ++ i).asSymbol, track[\audioBus]);
-            ~SC_BUS.put(("golem_fx_" ++ i).asSymbol, track[\fxBus]);
+            ~sc_bus.put(("golem_audio_" ++ i).asSymbol, track[\audioBus]);
+            ~sc_bus.put(("golem_fx_" ++ i).asSymbol, track[\fxBus]);
         });
 
         // Golem-specific control buses
-        ~SC_BUS.put(\golem_clip, Bus.control(s, 1));
-        ~SC_BUS.put(\golem_cv_env, Bus.control(s, 1));
-        ~SC_BUS.put(\golem_cv_tone, Bus.control(s, 1));
-        ~SC_BUS.put(\golem_cv_noise, Bus.control(s, 1));
-        ~SC_BUS.put(\golem_cv_onset, Bus.control(s, 1));
-        ~SC_BUS.put(\golem_fault, Bus.control(s, 1));
-        ~SC_BUS.put(\golem_ia_out, Bus.audio(s, 1));
-        ~SC_BUS.put(\golem_bc_out, Bus.audio(s, 1));
-        ~SC_BUS.put(\golem_te_out, Bus.audio(s, 1));
-        ~SC_BUS.put(\golem_pr_out, Bus.audio(s, 1));
-        ~SC_BUS.put(\golem_reflect, Bus.audio(s, 1));
+        ~sc_bus.put(\golem_clip, Bus.control(s, 1));
+        ~sc_bus.put(\golem_cv_env, Bus.control(s, 1));
+        ~sc_bus.put(\golem_cv_tone, Bus.control(s, 1));
+        ~sc_bus.put(\golem_cv_noise, Bus.control(s, 1));
+        ~sc_bus.put(\golem_cv_onset, Bus.control(s, 1));
+        ~sc_bus.put(\golem_fault, Bus.control(s, 1));
+        ~sc_bus.put(\golem_ia_out, Bus.audio(s, 1));
+        ~sc_bus.put(\golem_bc_out, Bus.audio(s, 1));
+        ~sc_bus.put(\golem_te_out, Bus.audio(s, 1));
+        ~sc_bus.put(\golem_pr_out, Bus.audio(s, 1));
+        ~sc_bus.put(\golem_reflect, Bus.audio(s, 1));
 
         "GOLEM: Buses allocated (% audio, % control)".format(
-            ~GOLEM_SEQ.tracks.size * 2 + 5, 6
+            ~golem_seq.tracks.size * 2 + 5, 6
         ).postln;
     },
 
@@ -326,26 +326,26 @@ SynthDef(\golem_rr, {
     // FX CHAIN SETUP (per track)
     // ==========================================
     setupFXChain: { |self, trackIdx|
-        var track = ~GOLEM_SEQ.tracks[trackIdx];
+        var track = ~golem_seq.tracks[trackIdx];
         var bus = track[\audioBus];
 
         if(bus.notNil) {
             // Chain: voice (already outputs to audioBus) -> drive -> bitcrush -> delay -> reverb
             track[\fxSynths] = [
-                Synth.after(~SC_GRP[\te], \golem_drive, [
+                Synth.after(~sc_grp[\te], \golem_drive, [
                     \inBus, bus.index, \outBus, bus.index,
                     \amount, track[\fx][\drive], \mix, (track[\fx][\drive] > 0).asInteger
                 ]),
-                Synth.after(~SC_GRP[\te], \golem_bitcrush, [
+                Synth.after(~sc_grp[\te], \golem_bitcrush, [
                     \inBus, bus.index, \outBus, bus.index,
                     \amount, track[\fx][\bitcrush], \mix, (track[\fx][\bitcrush] > 0).asInteger
                 ]),
-                Synth.after(~SC_GRP[\te], \golem_delay, [
+                Synth.after(~sc_grp[\te], \golem_delay, [
                     \inBus, bus.index, \outBus, bus.index,
                     \time, track[\fx][\delayTime], \feedback, track[\fx][\delayFB],
                     \mix, track[\fx][\delayMix]
                 ]),
-                Synth.after(~SC_GRP[\te], \golem_reverb, [
+                Synth.after(~sc_grp[\te], \golem_reverb, [
                     \inBus, bus.index, \outBus, bus.index,
                     \decay, track[\fx][\reverbDecay], \mix, track[\fx][\reverbMix]
                 ])
@@ -357,13 +357,14 @@ SynthDef(\golem_rr, {
     // FSAP-COMPLIANT ABSORPTION
     // ==========================================
     absorb: { |self, donorId|
+        var traits;
         // Single-equip invariant: reject if already equipped
         if(self.equipState != \idle) {
             "GOLEM: Cannot absorb — currently in state '%'".format(self.equipState).warn;
             ^false;
         };
 
-        var traits = ~BRAHMA_REGISTRY.getTraits(donorId);
+        traits = ~brahma_registry.getTraits(donorId);
         if(traits.isNil) {
             "GOLEM: Donor entity % not found in registry".format(donorId).warn;
             ^false;
@@ -383,7 +384,7 @@ SynthDef(\golem_rr, {
             var attack = traits[\temporal_topology][\attack] ? 0.01;
             var decay = traits[\temporal_topology][\decay] ? 0.3;
 
-            ~GOLEM_SEQ.tracks.do({ |track|
+            ~golem_seq.tracks.do({ |track|
                 // Shift frequencies based on donor centroid
                 track[\synthArgs][\freq] = (track[\synthArgs][\freq] ? 150) *
                     centroid.linexp(0, 1, 0.5, 2.0);
@@ -413,10 +414,10 @@ SynthDef(\golem_rr, {
         self.donorTraits = nil;
 
         // Reset to factory defaults
-        ~GOLEM_SEQ.tracks.do({ |track, i|
+        ~golem_seq.tracks.do({ |track, i|
             var presetNames = [\kick808, \snare, \clap, \hihatClosed,
                                \hihatOpen, \tom, \rim, \fmBell];
-            var preset = ~GOLEM_PATTERNS.factory[presetNames[i]];
+            var preset = ~golem_patterns.factory[presetNames[i]];
             if(preset.notNil) {
                 track[\synthDef] = preset[\synthDef];
                 track[\synthArgs] = preset[\args].copy;
@@ -442,11 +443,11 @@ SynthDef(\golem_rr, {
             \kick808, \snare, \clap, \hihatClosed,
             \hihatOpen, \tom, \rim, \fmBell
         ].do({ |presetName, i|
-            var preset = ~GOLEM_PATTERNS.factory[presetName];
+            var preset = ~golem_patterns.factory[presetName];
             if(preset.notNil) {
-                ~GOLEM_SEQ.tracks[i][\synthDef] = preset[\synthDef];
-                ~GOLEM_SEQ.tracks[i][\synthArgs] = preset[\args].copy;
-                ~GOLEM_SEQ.tracks[i][\name] = presetName.asString;
+                ~golem_seq.tracks[i][\synthDef] = preset[\synthDef];
+                ~golem_seq.tracks[i][\synthArgs] = preset[\args].copy;
+                ~golem_seq.tracks[i][\name] = presetName.asString;
             };
         });
 
@@ -454,22 +455,22 @@ SynthDef(\golem_rr, {
         8.do({ |i| self.setupFXChain(i) });
 
         // 5. Start LFOs
-        ~GOLEM_SEQ.startLFOs;
+        ~golem_seq.startLFOs;
 
         // 6. Init OSC responders
-        ~GOLEM_SEQ.initOSC;
+        ~golem_seq.initOSC;
 
         // 7. Set up a default 4-on-floor kick pattern
         [0, 4, 8, 12].do({ |step|
-            ~GOLEM_SEQ.tracks[0][\pattern][step][\active] = true;
+            ~golem_seq.tracks[0][\pattern][step][\active] = true;
         });
         // HH on 8ths
         8.do({ |i|
-            ~GOLEM_SEQ.tracks[3][\pattern][i * 2][\active] = true;
+            ~golem_seq.tracks[3][\pattern][i * 2][\active] = true;
         });
         // Snare on 2 and 4
         [4, 12].do({ |step|
-            ~GOLEM_SEQ.tracks[1][\pattern][step][\active] = true;
+            ~golem_seq.tracks[1][\pattern][step][\active] = true;
         });
 
         "--- BRAHMA: Golem Organism Booted ---".postln;
@@ -479,11 +480,11 @@ SynthDef(\golem_rr, {
     // SHUTDOWN
     // ==========================================
     shutdown: { |self|
-        ~GOLEM_SEQ.stop;
-        ~GOLEM_SEQ.stopLFOs;
+        ~golem_seq.stop;
+        ~golem_seq.stopLFOs;
 
         // Free FX synths
-        ~GOLEM_SEQ.tracks.do({ |track|
+        ~golem_seq.tracks.do({ |track|
             if(track[\fxSynths].notNil) {
                 track[\fxSynths].do({ |syn| syn.free });
                 track[\fxSynths] = nil;
@@ -491,7 +492,7 @@ SynthDef(\golem_rr, {
         });
 
         // Free buses
-        ~GOLEM_SEQ.tracks.do({ |track|
+        ~golem_seq.tracks.do({ |track|
             if(track[\audioBus].notNil) { track[\audioBus].free; track[\audioBus] = nil };
             if(track[\fxBus].notNil) { track[\fxBus].free; track[\fxBus] = nil };
         });
@@ -501,5 +502,5 @@ SynthDef(\golem_rr, {
 );
 
 // Boot Golem on load
-~GOLEM.boot;
+~golem.boot;
 )

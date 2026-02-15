@@ -13,7 +13,7 @@
 // Characters map to intervals; bracket notation provides push/pop pitch stacking.
 // The generate method expands the axiom through N iterations, then converts
 // the result string into a MIDI note sequence via the intervalMap.
-~ARBOR_VITAE = { |axiom="F", rules=nil, iterations=3|
+~arbor_vitae = { |axiom="F", rules=nil, iterations=3|
 	(
 		axiom: axiom,
 		rules: rules ?? { IdentityDictionary[$F -> "F[+F]F[-F]F"] },
@@ -29,7 +29,8 @@
 		],
 
 		generate: { |self|
-			var str = self[\axiom];
+			var str, note, stack;
+			str = self[\axiom];
 			self[\iterations].clip(1, 8).do({
 				var out = "";
 				str.do({ |c|
@@ -41,8 +42,8 @@
 			self[\result] = str;
 
 			// Convert L-system string to note sequence
-			var note = 60;
-			var stack = List.new;
+			note = 60;
+			stack = List.new;
 			self[\noteSequence] = List.new;
 
 			str.do({ |c|
@@ -64,8 +65,9 @@
 		},
 
 		next: { |self|
+			var n;
 			if(self[\noteSequence].isNil) { self.generate };
-			var n = self[\noteSequence][self[\pos]];
+			n = self[\noteSequence][self[\pos]];
 			self[\pos] = (self[\pos] + 1) % self[\noteSequence].size;
 			n;
 		},
@@ -106,7 +108,7 @@
 // the hit positions, creating weighted velocity patterns.
 // gate() returns 0/1, accent() returns 0/1 for accented hits,
 // velocity() returns 1.0 (accent) or 0.6 (normal hit).
-~DAEMON_EUCLIDEAN_EXT = { |length=16, hits=4, accents=2, rotation=0|
+~daemon_euclidean_ext = { |length=16, hits=4, accents=2, rotation=0|
 	(
 		length: length,
 		hits: hits,
@@ -117,13 +119,14 @@
 		pos: 0,
 
 		generate: { |self|
+			var hitPositions, numAccents, accPat;
 			// Bresenham Euclidean rhythm algorithm
 			self[\pattern] = Array.fill(self[\length], { |i|
 				((i * self[\hits]) % self[\length]) < self[\hits];
 			}).rotate(self[\rotation].asInteger);
 
 			// Accent pattern: Euclidean distribution within hit positions
-			var hitPositions = List.new;
+			hitPositions = List.new;
 			self[\pattern].do({ |v, i|
 				if(v) { hitPositions.add(i) };
 			});
@@ -131,8 +134,8 @@
 			self[\accentPattern] = Array.fill(self[\length], { false });
 
 			if(hitPositions.size > 0) {
-				var numAccents = self[\accents].clip(0, hitPositions.size);
-				var accPat = Array.fill(hitPositions.size, { |i|
+				numAccents = self[\accents].clip(0, hitPositions.size);
+				accPat = Array.fill(hitPositions.size, { |i|
 					((i * numAccents) % hitPositions.size) < numAccents;
 				});
 				accPat.do({ |isAccent, i|
@@ -186,7 +189,7 @@
 // rolls a coin for each row — rows that pass produce a gate.
 // Useful for generative drum programming where each row is a voice
 // and each column is a time step.
-~DAEMON_PROB_MATRIX = { |rows=8, cols=16|
+~daemon_prob_matrix = { |rows=8, cols=16|
 	(
 		matrix: Array.fill(rows, { Array.fill(cols, { 0.0 }) }),
 		rows: rows,
@@ -275,7 +278,7 @@ SynthDef(\daemon_prob_gate, {
 // ==========================================
 // GLOBAL INSTANCES DICTIONARY
 // ==========================================
-~DAEMON_SEQ_INSTANCES = IdentityDictionary.new;
+~daemon_seq_instances = IdentityDictionary.new;
 
 // ==========================================
 // OSC RESPONDERS: ARBOR_VITAE (L-System Sequencer)
@@ -284,16 +287,16 @@ OSCdef(\arbor_create, { |msg|
 	var name = msg[1].asSymbol;
 	var axiom = (msg[2] ? "F").asString;
 	var iterations = (msg[3] ? 3).asInteger;
-	var inst = ~ARBOR_VITAE.(axiom, nil, iterations);
+	var inst = ~arbor_vitae.(axiom, nil, iterations);
 	inst.generate;
-	~DAEMON_SEQ_INSTANCES[name] = [\arbor, inst];
+	~daemon_seq_instances[name] = [\arbor, inst];
 	"ARBOR_VITAE: Created '%' (axiom='%', iter=%)".format(name, axiom, iterations).postln;
 }, "/arbor/create");
 
 OSCdef(\arbor_next, { |msg|
 	var name = msg[1].asSymbol;
 	var outBusIdx = msg[2].asInteger;
-	var entry = ~DAEMON_SEQ_INSTANCES[name];
+	var entry = ~daemon_seq_instances[name];
 	if(entry.notNil and: { entry[0] == \arbor }) {
 		var inst = entry[1];
 		var bus = Bus(\control, outBusIdx, 1, s);
@@ -306,7 +309,7 @@ OSCdef(\arbor_set_rule, { |msg|
 	var name = msg[1].asSymbol;
 	var char = msg[2].asString[0]; // first character
 	var replacement = msg[3].asString;
-	var entry = ~DAEMON_SEQ_INSTANCES[name];
+	var entry = ~daemon_seq_instances[name];
 	if(entry.notNil and: { entry[0] == \arbor }) {
 		entry[1].setRule(char, replacement);
 		"ARBOR_VITAE: '%' rule % -> %".format(name, char, replacement).postln;
@@ -315,7 +318,7 @@ OSCdef(\arbor_set_rule, { |msg|
 
 OSCdef(\arbor_regenerate, { |msg|
 	var name = msg[1].asSymbol;
-	var entry = ~DAEMON_SEQ_INSTANCES[name];
+	var entry = ~daemon_seq_instances[name];
 	if(entry.notNil and: { entry[0] == \arbor }) {
 		entry[1].generate;
 	};
@@ -323,7 +326,7 @@ OSCdef(\arbor_regenerate, { |msg|
 
 OSCdef(\arbor_reset, { |msg|
 	var name = msg[1].asSymbol;
-	var entry = ~DAEMON_SEQ_INSTANCES[name];
+	var entry = ~daemon_seq_instances[name];
 	if(entry.notNil and: { entry[0] == \arbor }) {
 		entry[1].reset;
 	};
@@ -338,9 +341,9 @@ OSCdef(\deuc_create, { |msg|
 	var hits = (msg[3] ? 4).asInteger;
 	var accents = (msg[4] ? 2).asInteger;
 	var rotation = (msg[5] ? 0).asInteger;
-	var inst = ~DAEMON_EUCLIDEAN_EXT.(length, hits, accents, rotation);
+	var inst = ~daemon_euclidean_ext.(length, hits, accents, rotation);
 	inst.generate;
-	~DAEMON_SEQ_INSTANCES[name] = [\euclidean, inst];
+	~daemon_seq_instances[name] = [\euclidean, inst];
 	"DAEMON_EUCLIDEAN_EXT: Created '%'".format(name).postln;
 }, "/daemon/euclidean/create");
 
@@ -348,7 +351,7 @@ OSCdef(\deuc_advance, { |msg|
 	var name = msg[1].asSymbol;
 	var gateBusIdx = msg[2].asInteger;
 	var accentBusIdx = msg[3].asInteger;
-	var entry = ~DAEMON_SEQ_INSTANCES[name];
+	var entry = ~daemon_seq_instances[name];
 	if(entry.notNil and: { entry[0] == \euclidean }) {
 		var inst = entry[1];
 		var gateBus = Bus(\control, gateBusIdx, 1, s);
@@ -365,7 +368,7 @@ OSCdef(\deuc_set, { |msg|
 	var hits = msg[3].asInteger;
 	var accents = msg[4].asInteger;
 	var rotation = (msg[5] ? 0).asInteger;
-	var entry = ~DAEMON_SEQ_INSTANCES[name];
+	var entry = ~daemon_seq_instances[name];
 	if(entry.notNil and: { entry[0] == \euclidean }) {
 		entry[1].setParams(length, hits, accents, rotation);
 	};
@@ -373,7 +376,7 @@ OSCdef(\deuc_set, { |msg|
 
 OSCdef(\deuc_reset, { |msg|
 	var name = msg[1].asSymbol;
-	var entry = ~DAEMON_SEQ_INSTANCES[name];
+	var entry = ~daemon_seq_instances[name];
 	if(entry.notNil and: { entry[0] == \euclidean }) {
 		entry[1].reset;
 	};
@@ -386,8 +389,8 @@ OSCdef(\probmatrix_create, { |msg|
 	var name = msg[1].asSymbol;
 	var rows = (msg[2] ? 8).asInteger;
 	var cols = (msg[3] ? 16).asInteger;
-	var inst = ~DAEMON_PROB_MATRIX.(rows, cols);
-	~DAEMON_SEQ_INSTANCES[name] = [\probmatrix, inst];
+	var inst = ~daemon_prob_matrix.(rows, cols);
+	~daemon_seq_instances[name] = [\probmatrix, inst];
 	"DAEMON_PROB_MATRIX: Created '%' (%x%)".format(name, rows, cols).postln;
 }, "/daemon/probmatrix/create");
 
@@ -397,7 +400,7 @@ OSCdef(\probmatrix_set_cell, { |msg|
 	var row = msg[2].asInteger;
 	var col = msg[3].asInteger;
 	var prob = msg[4].asFloat;
-	var entry = ~DAEMON_SEQ_INSTANCES[name];
+	var entry = ~daemon_seq_instances[name];
 	if(entry.notNil and: { entry[0] == \probmatrix }) {
 		entry[1].setCell(row, col, prob);
 	};
@@ -408,7 +411,7 @@ OSCdef(\probmatrix_set_row, { |msg|
 	var name = msg[1].asSymbol;
 	var row = msg[2].asInteger;
 	var pattern = msg[3..].collect({ |v| v.asFloat });
-	var entry = ~DAEMON_SEQ_INSTANCES[name];
+	var entry = ~daemon_seq_instances[name];
 	if(entry.notNil and: { entry[0] == \probmatrix }) {
 		entry[1].setRow(row, pattern);
 	};
@@ -417,7 +420,7 @@ OSCdef(\probmatrix_set_row, { |msg|
 OSCdef(\probmatrix_advance, { |msg|
 	// /daemon/probmatrix/advance name gateBus0 gateBus1 ...
 	var name = msg[1].asSymbol;
-	var entry = ~DAEMON_SEQ_INSTANCES[name];
+	var entry = ~daemon_seq_instances[name];
 	if(entry.notNil and: { entry[0] == \probmatrix }) {
 		var inst = entry[1];
 		var activeRows, busIndices;
@@ -437,7 +440,7 @@ OSCdef(\probmatrix_advance, { |msg|
 OSCdef(\probmatrix_randomize, { |msg|
 	var name = msg[1].asSymbol;
 	var density = (msg[2] ? 0.3).asFloat;
-	var entry = ~DAEMON_SEQ_INSTANCES[name];
+	var entry = ~daemon_seq_instances[name];
 	if(entry.notNil and: { entry[0] == \probmatrix }) {
 		entry[1].randomize(density);
 	};
@@ -445,7 +448,7 @@ OSCdef(\probmatrix_randomize, { |msg|
 
 OSCdef(\probmatrix_clear, { |msg|
 	var name = msg[1].asSymbol;
-	var entry = ~DAEMON_SEQ_INSTANCES[name];
+	var entry = ~daemon_seq_instances[name];
 	if(entry.notNil and: { entry[0] == \probmatrix }) {
 		entry[1].clear;
 	};
@@ -453,7 +456,7 @@ OSCdef(\probmatrix_clear, { |msg|
 
 OSCdef(\probmatrix_reset, { |msg|
 	var name = msg[1].asSymbol;
-	var entry = ~DAEMON_SEQ_INSTANCES[name];
+	var entry = ~daemon_seq_instances[name];
 	if(entry.notNil and: { entry[0] == \probmatrix }) {
 		entry[1].reset;
 	};
@@ -462,7 +465,7 @@ OSCdef(\probmatrix_reset, { |msg|
 "--- BRAHMA: DAEMON Generative Sequencers Online (4 modules) ---".postln;
 
 // --- PATCH BAY REGISTRATION: Generative Sequencers ---
-if(~PATCH_BAY.notNil) {
+if(~patch_bay.notNil) {
     [
         [\sibyl_bernoulli, [
             [\prob, "Bernoulli probability"],
@@ -476,7 +479,7 @@ if(~PATCH_BAY.notNil) {
         var synthName = moduleSpec[0];
         var params = moduleSpec[1];
         params.do({ |p|
-            ~PATCH_BAY.registerDestination(
+            ~patch_bay.registerDestination(
                 (synthName.asString ++ "_" ++ p[0].asString).asSymbol,
                 p[0], synthName.asString ++ " " ++ p[1]
             );
@@ -486,34 +489,34 @@ if(~PATCH_BAY.notNil) {
 };
 
 // --- MODULE REGISTRY REGISTRATION ---
-if(~MODULE_REGISTRY.notNil) {
+if(~module_registry.notNil) {
     // Language-side: ARBOR_VITAE (L-System / Fractal Sequencer)
-    ~MODULE_REGISTRY.register(\ARBOR_VITAE, \daemon, \ARBOR_VITAE, [
+    ~module_registry.register(\ARBOR_VITAE, \daemon, \ARBOR_VITAE, [
         (\name: \axiom, \default: "F", \min: 0, \max: 0, \units: "", \desc: "L-system axiom string"),
         (\name: \iterations, \default: 3, \min: 1, \max: 8, \units: "", \desc: "Number of rewrite iterations"),
-    ], ~SC_GRP[\te], "Lindenmayer system fractal sequencer — string rewriting to MIDI note sequences");
+    ], ~sc_grp[\te], "Lindenmayer system fractal sequencer — string rewriting to MIDI note sequences");
 
     // Language-side: DAEMON_EUCLIDEAN_EXT (Extended Euclidean with accents)
-    ~MODULE_REGISTRY.register(\DAEMON_EUCLIDEAN_EXT, \daemon, \DAEMON_EUCLIDEAN_EXT, [
+    ~module_registry.register(\DAEMON_EUCLIDEAN_EXT, \daemon, \DAEMON_EUCLIDEAN_EXT, [
         (\name: \length, \default: 16, \min: 1, \max: 64, \units: "steps", \desc: "Pattern length"),
         (\name: \hits, \default: 4, \min: 0, \max: 64, \units: "", \desc: "Number of hits distributed"),
         (\name: \accents, \default: 2, \min: 0, \max: 64, \units: "", \desc: "Number of accented hits"),
         (\name: \rotation, \default: 0, \min: 0, \max: 63, \units: "steps", \desc: "Pattern rotation offset"),
-    ], ~SC_GRP[\te], "Euclidean rhythm generator with secondary Euclidean accent layer");
+    ], ~sc_grp[\te], "Euclidean rhythm generator with secondary Euclidean accent layer");
 
     // Language-side: DAEMON_PROB_MATRIX (Probability Matrix Sequencer)
-    ~MODULE_REGISTRY.register(\DAEMON_PROB_MATRIX, \daemon, \DAEMON_PROB_MATRIX, [
+    ~module_registry.register(\DAEMON_PROB_MATRIX, \daemon, \DAEMON_PROB_MATRIX, [
         (\name: \rows, \default: 8, \min: 1, \max: 32, \units: "", \desc: "Number of voice rows"),
         (\name: \cols, \default: 16, \min: 1, \max: 64, \units: "steps", \desc: "Number of time step columns"),
         (\name: \density, \default: 0.3, \min: 0, \max: 1, \units: "", \desc: "Randomization fill density"),
-    ], ~SC_GRP[\te], "Probability matrix grid sequencer for generative multi-voice drum programming");
+    ], ~sc_grp[\te], "Probability matrix grid sequencer for generative multi-voice drum programming");
 
     // SynthDef: Probability Gate (server-side coin flip gate)
-    ~MODULE_REGISTRY.register(\daemon_prob_gate, \daemon, \daemon_prob_gate, [
+    ~module_registry.register(\daemon_prob_gate, \daemon, \daemon_prob_gate, [
         (\name: \trigBus, \default: 0, \min: 0, \max: 4095, \units: "", \desc: "Trigger input bus"),
         (\name: \outBus, \default: 0, \min: 0, \max: 4095, \units: "", \desc: "Gate output bus"),
         (\name: \probability, \default: 1.0, \min: 0, \max: 1, \units: "", \desc: "Gate pass-through probability"),
-    ], ~SC_GRP[\te], "Server-side probability gate — passes or blocks triggers via coin flip");
+    ], ~sc_grp[\te], "Server-side probability gate — passes or blocks triggers via coin flip");
 
     "  -> DAEMON generative sequencers registered with Module Registry".postln;
 };

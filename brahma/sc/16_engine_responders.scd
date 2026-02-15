@@ -1,12 +1,12 @@
 /*
   Tier 1: VOICE — Polyphonic Engine Voice Manager
   OSC-driven note allocation for synthesis engines.
-  Supports microtonal frequencies via ~BRAHMA_TUNING, per-voice parameter setting,
+  Supports microtonal frequencies via ~brahma_tuning, per-voice parameter setting,
   and max 16 voices per instance.
 */
 
 (
-~ENGINE_VOICES = IdentityDictionary.new;
+~engine_voices = IdentityDictionary.new;
 
 // ==========================================
 // VOICE MANAGEMENT HELPERS
@@ -14,15 +14,15 @@
 
 // Create or get a voice instance container
 ~engineVoiceGetInstance = { |instanceName, engineName|
-    if(~ENGINE_VOICES[instanceName.asSymbol].isNil) {
-        ~ENGINE_VOICES[instanceName.asSymbol] = (
+    if(~engine_voices[instanceName.asSymbol].isNil) {
+        ~engine_voices[instanceName.asSymbol] = (
             voices: IdentityDictionary.new, // note -> Synth
             params: IdentityDictionary.new, // extra params
             outBus: 0,
             engineName: engineName.asSymbol
         );
     };
-    ~ENGINE_VOICES[instanceName.asSymbol];
+    ~engine_voices[instanceName.asSymbol];
 };
 
 // ==========================================
@@ -35,7 +35,7 @@ OSCdef(\engine_noteOn, { |msg|
     var note = msg[3].asInteger;
     var vel = msg[4].asFloat;
     var inst = ~engineVoiceGetInstance.(instanceName, engineName);
-    var spec = ~MODULE_REGISTRY.getSpec(engineName);
+    var spec = ~module_registry.getSpec(engineName);
 
     if(spec.notNil) {
         var freq, args, i, synth;
@@ -50,8 +50,8 @@ OSCdef(\engine_noteOn, { |msg|
         };
 
         // Convert MIDI note to frequency using microtonal system if available
-        freq = if(~BRAHMA_TUNING.notNil and: { ~BRAHMA_TUNING[\degreeToFreq].notNil }) {
-            ~BRAHMA_TUNING.degreeToFreq(note);
+        freq = if(~brahma_tuning.notNil and: { ~brahma_tuning[\degreeToFreq].notNil }) {
+            ~brahma_tuning.degreeToFreq(note);
         } {
             note.midicps;
         };
@@ -85,7 +85,7 @@ OSCdef(\engine_noteOn, { |msg|
 OSCdef(\engine_noteOff, { |msg|
     var instanceName = msg[1].asSymbol;
     var note = msg[2].asInteger;
-    var inst = ~ENGINE_VOICES[instanceName];
+    var inst = ~engine_voices[instanceName];
 
     if(inst.notNil) {
         var synth = inst[\voices][note];
@@ -104,7 +104,7 @@ OSCdef(\engine_set, { |msg|
     var instanceName = msg[1].asSymbol;
     var param = msg[2].asSymbol;
     var value = msg[3].asFloat;
-    var inst = ~ENGINE_VOICES[instanceName];
+    var inst = ~engine_voices[instanceName];
 
     if(inst.notNil) {
         // Store for future voices
@@ -123,7 +123,7 @@ OSCdef(\engine_set, { |msg|
 OSCdef(\engine_setOutBus, { |msg|
     var instanceName = msg[1].asSymbol;
     var bus = msg[2].asInteger;
-    var inst = ~ENGINE_VOICES[instanceName];
+    var inst = ~engine_voices[instanceName];
 
     if(inst.notNil) {
         inst[\outBus] = bus;
@@ -139,7 +139,7 @@ OSCdef(\engine_setOutBus, { |msg|
 // ==========================================
 OSCdef(\engine_freeAll, { |msg|
     var instanceName = msg[1].asSymbol;
-    var inst = ~ENGINE_VOICES[instanceName];
+    var inst = ~engine_voices[instanceName];
 
     if(inst.notNil) {
         inst[\voices].do({ |synth| synth.free });

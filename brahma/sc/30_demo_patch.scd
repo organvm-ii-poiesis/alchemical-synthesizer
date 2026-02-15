@@ -9,7 +9,7 @@
 */
 
 (
-~DEMO_PATCH = (
+~demo_patch = (
     active: false,
     synths: List.new,
     buses: IdentityDictionary.new,
@@ -29,7 +29,7 @@
             self[\buses][\reverb] = reverbBus;
 
             // 1. Create MOIRAI Markov chain trained on pentatonic intervals
-            markov = ~MOIRAI.(12);
+            markov = ~moirai.(12);
             // Train on pentatonic scale degrees (C D E G A in MIDI offsets)
             pentatonic = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 12, 7];
             markov.train(pentatonic);
@@ -37,8 +37,10 @@
             self[\instances].add([\moirai, markov]);
 
             // 2. Create Euclidean rhythm generator E(5, 8)
-            euclidean = ~DAEMON_EUCLIDEAN_EXT.(8, 5, 2, 0);
-            euclidean.generate;
+            if(~daemon_euclidean_ext.notNil) {
+                euclidean = ~daemon_euclidean_ext.(8, 5, 2, 0);
+                euclidean.generate;
+            };
             self[\instances].add([\euclidean, euclidean]);
 
             // 3. Create Lorenz attractor for filter modulation
@@ -65,27 +67,30 @@
                 \mix, 0.35,
                 \decay, 3.0,
                 \damping, 0.4
-            ], ~SC_GRP[\rr], \addToHead);
+            ], ~sc_grp[\rr], \addToHead);
             self[\synths].add(reverb);
 
             // 5. Start the generative Tdef
             Tdef(\demo_patch_gen, {
                 var baseNote = 48; // C3
-                var tempo = ~CHRONOS[\tempo] ? 120;
+                var tempo = ~chronos[\tempo] ? 120;
                 var stepDur, gate, vel;
 
                 loop {
                     stepDur = 60 / tempo / 4; // 16th notes
 
-                    // Advance Euclidean
-                    euclidean.advance;
-                    gate = euclidean.gate;
-                    vel = euclidean.velocity;
+                    // Advance Euclidean (or use fixed pattern fallback)
+                    gate = try {
+                        euclidean.advance;
+                        euclidean.gate;
+                    } { [1, 1, 0, 1, 0, 1, 0, 0].wrapAt(
+                        (thisThread.seconds * 4).asInteger % 8) };
+                    vel = try { euclidean.velocity } { 0.6 };
 
                     if(gate > 0) {
-                        var interval = (markov.next * 24).round.asInteger;
-                        var note = baseNote + interval;
-                        var freq, cutoff, voice;
+                        var interval, note, freq, cutoff, voice;
+                        interval = (markov[\next].(markov) * 24).round.asInteger;
+                        note = baseNote + interval;
                         note = note.clip(36, 84);
 
                         freq = note.midicps;
@@ -111,7 +116,7 @@
                             \osc2Type, 0, // sine
                             \osc2Detune, 5,
                             \osc2Level, 0.3
-                        ], ~SC_GRP[\te], \addToTail);
+                        ], ~sc_grp[\te], \addToTail);
 
                         // Release after a fraction of the step
                         {
@@ -121,8 +126,8 @@
                     };
 
                     // Update tempo from CHRONOS if running
-                    if(~CHRONOS.notNil and: { ~CHRONOS[\tempo].notNil }) {
-                        tempo = ~CHRONOS[\tempo];
+                    if(~chronos.notNil and: { ~chronos[\tempo].notNil }) {
+                        tempo = ~chronos[\tempo];
                     };
 
                     stepDur.wait;
@@ -130,8 +135,8 @@
             }).play;
 
             // Broadcast state
-            if(~VISUAL_CORTEX.notNil) {
-                ~VISUAL_CORTEX.target.sendMsg("/brahma/demo/state", 1);
+            if(~visual_cortex.notNil) {
+                ~visual_cortex.target.sendMsg("/brahma/demo/state", 1);
             };
 
             "--- BRAHMA: Demo Patch PLAYING ---".postln;
@@ -158,8 +163,8 @@
             self[\instances] = List.new;
 
             // Broadcast state
-            if(~VISUAL_CORTEX.notNil) {
-                ~VISUAL_CORTEX.target.sendMsg("/brahma/demo/state", 0);
+            if(~visual_cortex.notNil) {
+                ~visual_cortex.target.sendMsg("/brahma/demo/state", 0);
             };
 
             "--- BRAHMA: Demo Patch STOPPED ---".postln;
@@ -170,11 +175,11 @@
 // ==========================================
 // OSC RESPONDERS
 // ==========================================
-OSCdef(\demo_start, { ~DEMO_PATCH.start }, "/brahma/demo/start");
-OSCdef(\demo_stop, { ~DEMO_PATCH.stop }, "/brahma/demo/stop");
+OSCdef(\demo_start, { ~demo_patch.start }, "/brahma/demo/start");
+OSCdef(\demo_stop, { ~demo_patch.stop }, "/brahma/demo/stop");
 
 // Auto-start after 1 second delay
-{ 1.0.wait; ~DEMO_PATCH.start; }.fork;
+{ 1.0.wait; ~demo_patch.start; }.fork;
 
 "--- BRAHMA: Demo Patch Loaded (auto-start in 1s) ---".postln;
 )

@@ -17,7 +17,7 @@ SynthDef(\crucible_compressor, {
     var input, sc, env, gain, compressed, sig;
 
     input = In.ar(inBus, 1);
-    sc = if(sidechainBus >= 0, { In.ar(sidechainBus, 1) }, { input });
+    sc = Select.ar((sidechainBus >= 0), [input, In.ar(sidechainBus.clip(0, 2047), 1)]);
 
     env = Amplitude.kr(sc, attack.clip(0.0001, 1), release.clip(0.001, 2));
     env = env.ampdb;
@@ -64,7 +64,7 @@ SynthDef(\crucible_gate, {
     var input, sc, env, gateSignal, gated, sig;
 
     input = In.ar(inBus, 1);
-    sc = if(sidechainBus >= 0, { In.ar(sidechainBus, 1) }, { input });
+    sc = Select.ar((sidechainBus >= 0), [input, In.ar(sidechainBus.clip(0, 2047), 1)]);
 
     env = Amplitude.kr(sc, attack.clip(0.0001, 0.5), release.clip(0.001, 2));
 
@@ -262,7 +262,7 @@ SynthDef(\crucible_deesser, {
     var synthName = moduleSpec[0];
     var params = moduleSpec[1];
     params.do({ |p|
-        ~PATCH_BAY.registerDestination(
+        ~patch_bay.registerDestination(
             (synthName.asString ++ "_" ++ p[0].asString).asSymbol,
             p[0], synthName.asString ++ " " ++ p[1]
         );
@@ -270,8 +270,8 @@ SynthDef(\crucible_deesser, {
 });
 
 // --- MODULE REGISTRY REGISTRATION ---
-if(~MODULE_REGISTRY.notNil) {
-    ~MODULE_REGISTRY.register(\crucible_compressor, \fx, \crucible_compressor, [
+if(~module_registry.notNil) {
+    ~module_registry.register(\crucible_compressor, \fx, \crucible_compressor, [
         (\name: \mix, \default: 1.0, \min: 0, \max: 1, \units: "wet", \desc: "Dry/wet mix"),
         (\name: \bypass, \default: 0, \min: 0, \max: 1, \units: "", \desc: "Bypass toggle"),
         (\name: \threshold, \default: -12, \min: -60, \max: 0, \units: "dB", \desc: "Compression threshold"),
@@ -280,17 +280,17 @@ if(~MODULE_REGISTRY.notNil) {
         (\name: \release, \default: 0.1, \min: 0.001, \max: 2, \units: "s", \desc: "Release time"),
         (\name: \knee, \default: 6, \min: 0, \max: 30, \units: "dB", \desc: "Soft knee width"),
         (\name: \makeup, \default: 0, \min: 0, \max: 30, \units: "dB", \desc: "Makeup gain"),
-    ], ~SC_GRP[\rr], "Dynamics compressor with sidechain");
+    ], ~sc_grp[\rr], "Dynamics compressor with sidechain");
 
-    ~MODULE_REGISTRY.register(\crucible_limiter, \fx, \crucible_limiter, [
+    ~module_registry.register(\crucible_limiter, \fx, \crucible_limiter, [
         (\name: \mix, \default: 1.0, \min: 0, \max: 1, \units: "wet", \desc: "Dry/wet mix"),
         (\name: \bypass, \default: 0, \min: 0, \max: 1, \units: "", \desc: "Bypass toggle"),
         (\name: \ceiling, \default: -0.3, \min: -30, \max: 0, \units: "dB", \desc: "Ceiling level"),
         (\name: \lookahead, \default: 0.005, \min: 0.001, \max: 0.02, \units: "s", \desc: "Lookahead time"),
         (\name: \release, \default: 0.05, \min: 0.001, \max: 1, \units: "s", \desc: "Release time"),
-    ], ~SC_GRP[\rr], "Brickwall limiter");
+    ], ~sc_grp[\rr], "Brickwall limiter");
 
-    ~MODULE_REGISTRY.register(\crucible_gate, \fx, \crucible_gate, [
+    ~module_registry.register(\crucible_gate, \fx, \crucible_gate, [
         (\name: \mix, \default: 1.0, \min: 0, \max: 1, \units: "wet", \desc: "Dry/wet mix"),
         (\name: \bypass, \default: 0, \min: 0, \max: 1, \units: "", \desc: "Bypass toggle"),
         (\name: \threshold, \default: -40, \min: -80, \max: 0, \units: "dB", \desc: "Gate threshold"),
@@ -298,26 +298,26 @@ if(~MODULE_REGISTRY.notNil) {
         (\name: \attack, \default: 0.001, \min: 0.0001, \max: 0.5, \units: "s", \desc: "Attack time"),
         (\name: \hold, \default: 0.05, \min: 0.001, \max: 1, \units: "s", \desc: "Hold time"),
         (\name: \release, \default: 0.1, \min: 0.001, \max: 2, \units: "s", \desc: "Release time"),
-    ], ~SC_GRP[\rr], "Noise gate with sidechain and hold");
+    ], ~sc_grp[\rr], "Noise gate with sidechain and hold");
 
-    ~MODULE_REGISTRY.register(\crucible_expander, \fx, \crucible_expander, [
+    ~module_registry.register(\crucible_expander, \fx, \crucible_expander, [
         (\name: \mix, \default: 1.0, \min: 0, \max: 1, \units: "wet", \desc: "Dry/wet mix"),
         (\name: \bypass, \default: 0, \min: 0, \max: 1, \units: "", \desc: "Bypass toggle"),
         (\name: \threshold, \default: -30, \min: -60, \max: 0, \units: "dB", \desc: "Expansion threshold"),
         (\name: \ratio, \default: 2, \min: 1, \max: 20, \units: ":1", \desc: "Expansion ratio"),
         (\name: \attack, \default: 0.005, \min: 0.0001, \max: 0.5, \units: "s", \desc: "Attack time"),
         (\name: \release, \default: 0.1, \min: 0.001, \max: 2, \units: "s", \desc: "Release time"),
-    ], ~SC_GRP[\rr], "Downward expander");
+    ], ~sc_grp[\rr], "Downward expander");
 
-    ~MODULE_REGISTRY.register(\crucible_ducker, \fx, \crucible_ducker, [
+    ~module_registry.register(\crucible_ducker, \fx, \crucible_ducker, [
         (\name: \mix, \default: 1.0, \min: 0, \max: 1, \units: "wet", \desc: "Dry/wet mix"),
         (\name: \bypass, \default: 0, \min: 0, \max: 1, \units: "", \desc: "Bypass toggle"),
         (\name: \duckAmount, \default: 0.8, \min: 0, \max: 1, \units: "", \desc: "Ducking depth"),
         (\name: \attack, \default: 0.005, \min: 0.0001, \max: 0.5, \units: "s", \desc: "Attack time"),
         (\name: \release, \default: 0.15, \min: 0.001, \max: 2, \units: "s", \desc: "Release time"),
-    ], ~SC_GRP[\rr], "Sidechain ducker");
+    ], ~sc_grp[\rr], "Sidechain ducker");
 
-    ~MODULE_REGISTRY.register(\crucible_multiband, \fx, \crucible_multiband, [
+    ~module_registry.register(\crucible_multiband, \fx, \crucible_multiband, [
         (\name: \mix, \default: 1.0, \min: 0, \max: 1, \units: "wet", \desc: "Dry/wet mix"),
         (\name: \bypass, \default: 0, \min: 0, \max: 1, \units: "", \desc: "Bypass toggle"),
         (\name: \lowFreq, \default: 200, \min: 20, \max: 20000, \units: "Hz", \desc: "Low crossover frequency"),
@@ -340,9 +340,9 @@ if(~MODULE_REGISTRY.notNil) {
         (\name: \lowLevel, \default: 1, \min: 0, \max: 2, \units: "", \desc: "Low band output level"),
         (\name: \midLevel, \default: 1, \min: 0, \max: 2, \units: "", \desc: "Mid band output level"),
         (\name: \highLevel, \default: 1, \min: 0, \max: 2, \units: "", \desc: "High band output level"),
-    ], ~SC_GRP[\rr], "3-band multiband compressor");
+    ], ~sc_grp[\rr], "3-band multiband compressor");
 
-    ~MODULE_REGISTRY.register(\crucible_deesser, \fx, \crucible_deesser, [
+    ~module_registry.register(\crucible_deesser, \fx, \crucible_deesser, [
         (\name: \mix, \default: 1.0, \min: 0, \max: 1, \units: "wet", \desc: "Dry/wet mix"),
         (\name: \bypass, \default: 0, \min: 0, \max: 1, \units: "", \desc: "Bypass toggle"),
         (\name: \freq, \default: 6000, \min: 2000, \max: 16000, \units: "Hz", \desc: "Sibilance center frequency"),
@@ -351,7 +351,7 @@ if(~MODULE_REGISTRY.notNil) {
         (\name: \ratio, \default: 4, \min: 1, \max: 20, \units: ":1", \desc: "Compression ratio for sibilance"),
         (\name: \attack, \default: 0.001, \min: 0.0001, \max: 0.1, \units: "s", \desc: "Attack time"),
         (\name: \release, \default: 0.03, \min: 0.001, \max: 0.5, \units: "s", \desc: "Release time"),
-    ], ~SC_GRP[\rr], "De-esser for sibilance reduction");
+    ], ~sc_grp[\rr], "De-esser for sibilance reduction");
 
     "  -> 7 Dynamics FX registered with Module Registry".postln;
 };

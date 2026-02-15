@@ -156,7 +156,7 @@ SynthDef(\tactus_gate, {
 // Language-side XY path recorder/player for gesture playback.
 // Records position samples at configurable rate, plays them
 // back into control buses with optional looping.
-~TETRAGRAMMATON_RECORDER = (
+~tetragrammaton_recorder = (
     recording: false,
     playing: false,
     gesturePath: List.new,
@@ -228,8 +228,8 @@ OSCdef(\sigillum_pad_osc, { |msg|
     var posY      = msg[5].asFloat;
 
     // Look up synth in global registry by pad index
-    if(~SIGILLUM_PADS.notNil and: { ~SIGILLUM_PADS[padIndex].notNil }) {
-        ~SIGILLUM_PADS[padIndex].set(
+    if(~sigillum_pads.notNil and: { ~sigillum_pads[padIndex].notNil }) {
+        ~sigillum_pads[padIndex].set(
             \gate, gate,
             \pressure, pressure,
             \posX, posX,
@@ -244,16 +244,16 @@ OSCdef(\sigillum_pad_osc, { |msg|
 // /meridian/position [value]
 OSCdef(\meridian_position_osc, { |msg|
     var value = msg[1].asFloat;
-    if(~MERIDIAN_SYNTH.notNil) {
-        ~MERIDIAN_SYNTH.set(\position, value);
+    if(~meridian_synth.notNil) {
+        ~meridian_synth.set(\position, value);
     };
 }, "/meridian/position");
 
 // /meridian/gate [value]
 OSCdef(\meridian_gate_osc, { |msg|
     var value = msg[1].asFloat;
-    if(~MERIDIAN_SYNTH.notNil) {
-        ~MERIDIAN_SYNTH.set(\gate, value);
+    if(~meridian_synth.notNil) {
+        ~meridian_synth.set(\gate, value);
     };
 }, "/meridian/gate");
 
@@ -264,45 +264,45 @@ OSCdef(\tetragrammaton_xy_osc, { |msg|
     var y = msg[2].asFloat;
 
     // Update the morph synth if it exists
-    if(~TETRAGRAMMATON_SYNTH.notNil) {
-        ~TETRAGRAMMATON_SYNTH.set(\posX, x, \posY, y);
+    if(~tetragrammaton_synth.notNil) {
+        ~tetragrammaton_synth.set(\posX, x, \posY, y);
     };
 
     // Feed the gesture recorder's current position
-    ~TETRAGRAMMATON_RECORDER[\currentX] = x;
-    ~TETRAGRAMMATON_RECORDER[\currentY] = y;
+    ~tetragrammaton_recorder[\currentX] = x;
+    ~tetragrammaton_recorder[\currentY] = y;
 }, "/tetragrammaton/xy");
 
 // /tetragrammaton/record/start
 OSCdef(\tetragrammaton_rec_start, { |msg|
-    ~TETRAGRAMMATON_RECORDER.startRecord;
+    ~tetragrammaton_recorder.startRecord;
 }, "/tetragrammaton/record/start");
 
 // /tetragrammaton/record/stop
 OSCdef(\tetragrammaton_rec_stop, { |msg|
-    ~TETRAGRAMMATON_RECORDER.stopRecord;
+    ~tetragrammaton_recorder.stopRecord;
 }, "/tetragrammaton/record/stop");
 
 // /tetragrammaton/play/start
 OSCdef(\tetragrammaton_play_start, { |msg|
     var loop = if(msg[1].notNil) { msg[1].asInteger > 0 } { true };
-    ~TETRAGRAMMATON_RECORDER.startPlay(loop,
-        ~TETRAGRAMMATON_BUS_X,
-        ~TETRAGRAMMATON_BUS_Y
+    ~tetragrammaton_recorder.startPlay(loop,
+        ~tetragrammaton_bus_x,
+        ~tetragrammaton_bus_y
     );
 }, "/tetragrammaton/play/start");
 
 // /tetragrammaton/play/stop
 OSCdef(\tetragrammaton_play_stop, { |msg|
-    ~TETRAGRAMMATON_RECORDER.stopPlay;
+    ~tetragrammaton_recorder.stopPlay;
 }, "/tetragrammaton/play/stop");
 
 // --- TACTUS: Gesture Threshold ---
 // /tactus/threshold [value]
 OSCdef(\tactus_threshold_osc, { |msg|
     var value = msg[1].asFloat;
-    if(~TACTUS_SYNTH.notNil) {
-        ~TACTUS_SYNTH.set(\threshold, value);
+    if(~tactus_synth.notNil) {
+        ~tactus_synth.set(\threshold, value);
     };
 }, "/tactus/threshold");
 
@@ -311,17 +311,17 @@ OSCdef(\tactus_threshold_osc, { |msg|
 // ==========================================
 // Pad registry: stores Synth references indexed by pad number.
 // Populate these when instantiating SIGILLUM pads in a performance patch.
-~SIGILLUM_PADS = IdentityDictionary.new;
+~sigillum_pads = IdentityDictionary.new;
 
 // Optional bus references for TETRAGRAMMATON gesture playback.
 // Assign Bus objects here when setting up a performance patch.
-~TETRAGRAMMATON_BUS_X = nil;
-~TETRAGRAMMATON_BUS_Y = nil;
+~tetragrammaton_bus_x = nil;
+~tetragrammaton_bus_y = nil;
 
 // Placeholder synth references — assigned during performance instantiation
-~MERIDIAN_SYNTH = nil;
-~TETRAGRAMMATON_SYNTH = nil;
-~TACTUS_SYNTH = nil;
+~meridian_synth = nil;
+~tetragrammaton_synth = nil;
+~tactus_synth = nil;
 
 "--- BRAHMA: CORPUS HERMETICUM Controllers Online (5 modules) ---".postln;
 "  SIGILLUM (Touch Plates) | MERIDIAN (Ribbon) | TETRAGRAMMATON (XY Morph AR+KR)".postln;
@@ -354,7 +354,7 @@ OSCdef(\tactus_threshold_osc, { |msg|
     var synthName = moduleSpec[0];
     var params = moduleSpec[1];
     params.do({ |p|
-        ~PATCH_BAY.registerDestination(
+        ~patch_bay.registerDestination(
             (synthName.asString ++ "_" ++ p[0].asString).asSymbol,
             p[0], synthName.asString ++ " " ++ p[1]
         );

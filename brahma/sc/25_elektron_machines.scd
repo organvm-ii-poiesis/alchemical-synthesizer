@@ -281,7 +281,7 @@ SynthDef(\chimera_sample_layer, {
 // ==========================================
 // 8 macro knobs, each mappable to multiple parameter targets.
 // Inspired by Elektron RYTM performance mode for expressive one-knob control.
-~CHIMERA_MACROS = (
+~chimera_macros = (
     macros: Array.fill(8, { (targets: List.new, value: 0.5) }),
 
     // Set a macro value and propagate to all assigned targets
@@ -353,11 +353,11 @@ OSCdef(\automaton_trx_trig, { |msg|
     var snap = msg[5] !? _.asFloat ?? 0.5;
     var vel = msg[6] !? _.asFloat ?? 0.8;
     Synth(\automaton_trx, [
-        \outBus, ~AUTOMATON_BUS ? 0,
+        \outBus, ~automaton_bus ? 0,
         \type, type, \freq, freq, \decay, decay,
         \tone, tone, \snap, snap, \vel, vel, \gate, 1
-    ], target: ~SC_GRP[\te]);
-    ~VISUAL_CORTEX.target.sendMsg("/automaton/trx/state", type, freq, vel);
+    ], target: ~sc_grp[\te]);
+    ~visual_cortex.target.sendMsg("/automaton/trx/state", type, freq, vel);
 }, "/automaton/trx");
 
 // EFM trigger: /automaton/efm <freq:float> <ratio:float> <index:float> <decay:float> <feedback:float> <vel:float>
@@ -369,11 +369,11 @@ OSCdef(\automaton_efm_trig, { |msg|
     var feedback = msg[5] !? _.asFloat ?? 0;
     var vel = msg[6] !? _.asFloat ?? 0.8;
     Synth(\automaton_efm, [
-        \outBus, ~AUTOMATON_BUS ? 0,
+        \outBus, ~automaton_bus ? 0,
         \freq, freq, \ratio, ratio, \index, index,
         \decay, decay, \feedback, feedback, \vel, vel, \gate, 1
-    ], target: ~SC_GRP[\te]);
-    ~VISUAL_CORTEX.target.sendMsg("/automaton/efm/state", freq, ratio, vel);
+    ], target: ~sc_grp[\te]);
+    ~visual_cortex.target.sendMsg("/automaton/efm/state", freq, ratio, vel);
 }, "/automaton/efm");
 
 // E12 trigger: /automaton/e12 <bufnum:int> <rate:float> <start:float> <decay:float> <lofi:float> <vel:float>
@@ -385,11 +385,11 @@ OSCdef(\automaton_e12_trig, { |msg|
     var lofi = msg[5] !? _.asFloat ?? 0.5;
     var vel = msg[6] !? _.asFloat ?? 0.8;
     Synth(\automaton_e12, [
-        \outBus, ~AUTOMATON_BUS ? 0,
+        \outBus, ~automaton_bus ? 0,
         \bufnum, bufnum, \rate, rate, \start, start,
         \decay, decay, \lofi, lofi, \vel, vel, \gate, 1
-    ], target: ~SC_GRP[\te]);
-    ~VISUAL_CORTEX.target.sendMsg("/automaton/e12/state", bufnum, lofi, vel);
+    ], target: ~sc_grp[\te]);
+    ~visual_cortex.target.sendMsg("/automaton/e12/state", bufnum, lofi, vel);
 }, "/automaton/e12");
 
 // GND trigger: /automaton/gnd <freq:float> <bw:float> <decay:float> <type:int> <vel:float>
@@ -400,11 +400,11 @@ OSCdef(\automaton_gnd_trig, { |msg|
     var type = msg[4] !? _.asInteger ?? 0;
     var vel = msg[5] !? _.asFloat ?? 0.8;
     Synth(\automaton_gnd, [
-        \outBus, ~AUTOMATON_BUS ? 0,
+        \outBus, ~automaton_bus ? 0,
         \freq, freq, \bw, bw, \decay, decay,
         \type, type, \vel, vel, \gate, 1
-    ], target: ~SC_GRP[\te]);
-    ~VISUAL_CORTEX.target.sendMsg("/automaton/gnd/state", freq, type, vel);
+    ], target: ~sc_grp[\te]);
+    ~visual_cortex.target.sendMsg("/automaton/gnd/state", freq, type, vel);
 }, "/automaton/gnd");
 
 // ==========================================
@@ -416,12 +416,12 @@ OSCdef(\azoth_minor_arp_ctrl, { |msg|
     var rate = msg[1] !? _.asFloat ?? 8;
     var mode = msg[2] !? _.asInteger ?? 0;
     var octaves = msg[3] !? _.asInteger ?? 2;
-    ~AZOTH_MINOR_NODES !? { |nodes|
+    ~azoth_minor_nodes !? { |nodes|
         nodes[\arp] !? { |syn|
             syn.set(\rate, rate.clip(0.5, 64), \mode, mode.clip(0, 3), \octaves, octaves.clip(1, 4));
         };
     };
-    ~VISUAL_CORTEX.target.sendMsg("/azoth_minor/arp/state", rate, mode, octaves);
+    ~visual_cortex.target.sendMsg("/azoth_minor/arp/state", rate, mode, octaves);
 }, "/azoth_minor/arp");
 
 // ==========================================
@@ -432,8 +432,8 @@ OSCdef(\azoth_minor_arp_ctrl, { |msg|
 OSCdef(\chimera_macro_set, { |msg|
     var idx = msg[1].asInteger;
     var val = msg[2].asFloat;
-    ~CHIMERA_MACROS.setMacro(idx, val);
-    ~VISUAL_CORTEX.target.sendMsg("/chimera/macro/state", idx, val);
+    ~chimera_macros.setMacro(idx, val);
+    ~visual_cortex.target.sendMsg("/chimera/macro/state", idx, val);
 }, "/chimera/macro");
 
 // Macro assign: /chimera/macro/assign <macroIdx:int> <busIdx:int> <min:float> <max:float>
@@ -444,12 +444,12 @@ OSCdef(\chimera_macro_assign, { |msg|
     var max = msg[4] !? _.asFloat ?? 1;
     var curve = msg[5] !? _.asSymbol ?? \lin;
     var bus = Bus(\control, busIdx, 1, s);
-    ~CHIMERA_MACROS.assignTarget(macroIdx, bus, min, max, curve);
+    ~chimera_macros.assignTarget(macroIdx, bus, min, max, curve);
 }, "/chimera/macro/assign");
 
 // Macro clear: /chimera/macro/clear <macroIdx:int>
 OSCdef(\chimera_macro_clear, { |msg|
-    ~CHIMERA_MACROS.clearMacro(msg[1].asInteger);
+    ~chimera_macros.clearMacro(msg[1].asInteger);
 }, "/chimera/macro/clear");
 
 // Sample layer trigger: /chimera/layer <bufnum:int> <synthBus:int> <vel:float> <synthLevel:float> <sampleLevel:float>
@@ -460,23 +460,23 @@ OSCdef(\chimera_layer_trig, { |msg|
     var synthLevel = msg[4] !? _.asFloat ?? 0.7;
     var sampleLevel = msg[5] !? _.asFloat ?? 0.5;
     Synth(\chimera_sample_layer, [
-        \outBus, ~CHIMERA_BUS ? 0,
+        \outBus, ~chimera_bus ? 0,
         \synthBus, synthBus,
         \bufnum, bufnum,
         \vel, vel,
         \synthLevel, synthLevel,
         \sampleLevel, sampleLevel,
         \gate, 1
-    ], target: ~SC_GRP[\te]);
-    ~VISUAL_CORTEX.target.sendMsg("/chimera/layer/state", bufnum, vel);
+    ], target: ~sc_grp[\te]);
+    ~visual_cortex.target.sendMsg("/chimera/layer/state", bufnum, vel);
 }, "/chimera/layer");
 
 // ==========================================
 // Node and bus holders for live instances
 // ==========================================
-~AUTOMATON_BUS = ~AUTOMATON_BUS ? 0;
-~AZOTH_MINOR_NODES = ~AZOTH_MINOR_NODES ? (arp: nil);
-~CHIMERA_BUS = ~CHIMERA_BUS ? 0;
+~automaton_bus = ~automaton_bus ? 0;
+~azoth_minor_nodes = ~azoth_minor_nodes ? (arp: nil);
+~chimera_bus = ~chimera_bus ? 0;
 
 "--- BRAHMA: MAGNUM OPUS Synthesis Machines Online (6 machines) ---".postln;
 "  AUTOMATON: TRX (909) | EFM (FM Metal) | E12 (12-bit) | GND (Noise)".postln;
@@ -516,7 +516,7 @@ OSCdef(\chimera_layer_trig, { |msg|
     var synthName = moduleSpec[0];
     var params = moduleSpec[1];
     params.do({ |p|
-        ~PATCH_BAY.registerDestination(
+        ~patch_bay.registerDestination(
             (synthName.asString ++ "_" ++ p[0].asString).asSymbol,
             p[0], synthName.asString ++ " " ++ p[1]
         );
@@ -524,56 +524,56 @@ OSCdef(\chimera_layer_trig, { |msg|
 });
 
 // --- MODULE REGISTRY REGISTRATION ---
-if(~MODULE_REGISTRY.notNil) {
+if(~module_registry.notNil) {
     // AUTOMATON TRX — 909-style analog drum machine
-    ~MODULE_REGISTRY.register(\automaton_trx, \elektron, \automaton_trx, [
+    ~module_registry.register(\automaton_trx, \elektron, \automaton_trx, [
         (\name: \type, \default: 0, \min: 0, \max: 5, \units: "", \desc: "Drum type (0=kick,1=snare,2=hat,3=clap,4=tom,5=rim)"),
         (\name: \freq, \default: 60, \min: 20, \max: 20000, \units: "Hz", \desc: "Pitch"),
         (\name: \decay, \default: 0.5, \min: 0.01, \max: 2, \units: "s", \desc: "Decay time"),
         (\name: \tone, \default: 0.5, \min: 0, \max: 1, \units: "", \desc: "Tone"),
         (\name: \snap, \default: 0.5, \min: 0, \max: 1, \units: "", \desc: "Snap/transient"),
         (\name: \vel, \default: 0.8, \min: 0, \max: 1, \units: "", \desc: "Velocity"),
-    ], ~SC_GRP[\te], "909-style analog drum machine");
+    ], ~sc_grp[\te], "909-style analog drum machine");
 
     // AUTOMATON EFM — FM metal percussion
-    ~MODULE_REGISTRY.register(\automaton_efm, \elektron, \automaton_efm, [
+    ~module_registry.register(\automaton_efm, \elektron, \automaton_efm, [
         (\name: \freq, \default: 800, \min: 20, \max: 20000, \units: "Hz", \desc: "Carrier frequency"),
         (\name: \ratio, \default: 3.5, \min: 0.25, \max: 16, \units: "", \desc: "Modulator ratio"),
         (\name: \index, \default: 5, \min: 0, \max: 20, \units: "", \desc: "FM index"),
         (\name: \decay, \default: 0.3, \min: 0.01, \max: 4, \units: "s", \desc: "Decay time"),
         (\name: \feedback, \default: 0, \min: 0, \max: 3, \units: "", \desc: "FM feedback"),
         (\name: \vel, \default: 0.8, \min: 0, \max: 1, \units: "", \desc: "Velocity"),
-    ], ~SC_GRP[\te], "FM metal percussion (bells, gongs, cymbals)");
+    ], ~sc_grp[\te], "FM metal percussion (bells, gongs, cymbals)");
 
     // AUTOMATON E12 — 12-bit sample emulation
-    ~MODULE_REGISTRY.register(\automaton_e12, \elektron, \automaton_e12, [
+    ~module_registry.register(\automaton_e12, \elektron, \automaton_e12, [
         (\name: \bufnum, \default: 0, \min: 0, \max: 4096, \units: "", \desc: "Buffer number"),
         (\name: \rate, \default: 1.0, \min: -4, \max: 4, \units: "x", \desc: "Playback rate"),
         (\name: \start, \default: 0, \min: 0, \max: 1, \units: "", \desc: "Start position (normalized)"),
         (\name: \decay, \default: 1.0, \min: 0.01, \max: 8, \units: "s", \desc: "Decay time"),
         (\name: \lofi, \default: 0.5, \min: 0, \max: 1, \units: "", \desc: "Lo-fi degradation (bit crush + SR reduce)"),
         (\name: \vel, \default: 0.8, \min: 0, \max: 1, \units: "", \desc: "Velocity"),
-    ], ~SC_GRP[\te], "12-bit sample emulation with bit-crush and SR reduction");
+    ], ~sc_grp[\te], "12-bit sample emulation with bit-crush and SR reduction");
 
     // AUTOMATON GND — Noise machine percussion
-    ~MODULE_REGISTRY.register(\automaton_gnd, \elektron, \automaton_gnd, [
+    ~module_registry.register(\automaton_gnd, \elektron, \automaton_gnd, [
         (\name: \freq, \default: 1000, \min: 20, \max: 20000, \units: "Hz", \desc: "Center frequency"),
         (\name: \bw, \default: 0.5, \min: 0.01, \max: 2, \units: "", \desc: "Bandwidth (reciprocal Q)"),
         (\name: \decay, \default: 0.2, \min: 0.005, \max: 4, \units: "s", \desc: "Decay time"),
         (\name: \type, \default: 0, \min: 0, \max: 2, \units: "", \desc: "Noise type (0=white,1=pink,2=crackle)"),
         (\name: \vel, \default: 0.8, \min: 0, \max: 1, \units: "", \desc: "Velocity"),
-    ], ~SC_GRP[\te], "Filtered noise percussion with selectable noise source");
+    ], ~sc_grp[\te], "Filtered noise percussion with selectable noise source");
 
     // AZOTH_MINOR ARP — Arpeggiator
-    ~MODULE_REGISTRY.register(\azoth_minor_arp, \elektron, \azoth_minor_arp, [
+    ~module_registry.register(\azoth_minor_arp, \elektron, \azoth_minor_arp, [
         (\name: \trigBus, \default: 0, \min: 0, \max: 4096, \units: "", \desc: "External trigger bus (0=self-clock)"),
         (\name: \rate, \default: 8, \min: 0.5, \max: 64, \units: "Hz", \desc: "Arp rate (pulses per beat)"),
         (\name: \mode, \default: 0, \min: 0, \max: 3, \units: "", \desc: "Direction (0=up,1=down,2=upDown,3=random)"),
         (\name: \octaves, \default: 2, \min: 1, \max: 4, \units: "oct", \desc: "Octave range"),
-    ], ~SC_GRP[\te], "Digitone-style arpeggiator with direction modes");
+    ], ~sc_grp[\te], "Digitone-style arpeggiator with direction modes");
 
     // CHIMERA SAMPLE LAYER — Analog + sample hybrid
-    ~MODULE_REGISTRY.register(\chimera_sample_layer, \elektron, \chimera_sample_layer, [
+    ~module_registry.register(\chimera_sample_layer, \elektron, \chimera_sample_layer, [
         (\name: \synthBus, \default: 0, \min: 0, \max: 4096, \units: "", \desc: "Analog synthesis input bus"),
         (\name: \bufnum, \default: 0, \min: 0, \max: 4096, \units: "", \desc: "Sample buffer number"),
         (\name: \synthLevel, \default: 0.7, \min: 0, \max: 2, \units: "", \desc: "Analog synth level"),
@@ -584,6 +584,6 @@ if(~MODULE_REGISTRY.notNil) {
         (\name: \filterFreq, \default: 8000, \min: 20, \max: 20000, \units: "Hz", \desc: "Filter cutoff frequency"),
         (\name: \filterRes, \default: 1, \min: 0.5, \max: 20, \units: "", \desc: "Filter resonance"),
         (\name: \vel, \default: 0.8, \min: 0, \max: 1, \units: "", \desc: "Velocity"),
-    ], ~SC_GRP[\te], "RYTM-style analog + sample hybrid drum layer");
+    ], ~sc_grp[\te], "RYTM-style analog + sample hybrid drum layer");
 };
 )

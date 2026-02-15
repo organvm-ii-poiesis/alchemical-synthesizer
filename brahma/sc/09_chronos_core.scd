@@ -11,7 +11,7 @@
 // ==========================================
 // CHRONOS CORE STATE
 // ==========================================
-~CHRONOS = (
+~chronos = (
     // Transport state
     playing: false,
     recording: false,
@@ -57,7 +57,7 @@
         self[\targets].put(name.asSymbol, (
             synthDef: synthDef,
             outBus: outBus,
-            group: group ? ~SC_GRP[\te]
+            group: group ? ~sc_grp[\te]
         ));
         "CHRONOS: Target '%' registered (%)".format(name, synthDef).postln;
     },

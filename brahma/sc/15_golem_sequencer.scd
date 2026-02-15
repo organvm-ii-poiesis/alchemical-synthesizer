@@ -27,7 +27,7 @@ SynthDef(\golem_lfo, {
 // ==========================================
 // SEQUENCER ENGINE (language-side)
 // ==========================================
-~GOLEM_SEQ = (
+~golem_seq = (
 
     // State
     playing: false,
@@ -75,7 +75,7 @@ SynthDef(\golem_lfo, {
             // Modulation matrix entries for this track
             modRoutes: List.new,
 
-            // Audio/control buses (allocated by ~GOLEM)
+            // Audio/control buses (allocated by ~golem)
             audioBus: nil,
             fxBus: nil,
 
@@ -171,23 +171,23 @@ SynthDef(\golem_lfo, {
                                     Synth(track[\synthDef],
                                         [\outBus, track[\audioBus].index,
                                          \velocity, vel, \gate, 1] ++ args.asPairs,
-                                        target: ~SC_GRP[\te]
+                                        target: ~sc_grp[\te]
                                     );
                                 }.fork(self.clock);
                             };
 
                             // Broadcast trigger to Visual Cortex
-                            ~VISUAL_CORTEX.target.sendMsg(
+                            ~visual_cortex.target.sendMsg(
                                 "/golem/track/trigger", trackIdx, vel
                             );
                         };
                     });
 
                     // Broadcast step position
-                    ~VISUAL_CORTEX.target.sendMsg(
+                    ~visual_cortex.target.sendMsg(
                         "/golem/step", self.currentStep
                     );
-                    ~VISUAL_CORTEX.target.sendMsg(
+                    ~visual_cortex.target.sendMsg(
                         "/golem/seq/state", 1, self.tempo, self.currentStep
                     );
 
@@ -213,7 +213,7 @@ SynthDef(\golem_lfo, {
             self.playing = false;
             Tdef(\golem_seq).stop;
             self.currentStep = 0;
-            ~VISUAL_CORTEX.target.sendMsg("/golem/seq/state", 0, self.tempo, 0);
+            ~visual_cortex.target.sendMsg("/golem/seq/state", 0, self.tempo, 0);
             "GOLEM: Sequencer stopped".postln;
         };
     },
@@ -326,7 +326,7 @@ SynthDef(\golem_lfo, {
             var allMuted = members.every({ |idx| self.tracks[idx][\muted] });
             members.do({ |idx|
                 self.tracks[idx][\muted] = allMuted.not;
-                ~VISUAL_CORTEX.target.sendMsg(
+                ~visual_cortex.target.sendMsg(
                     "/golem/track/state", idx,
                     self.tracks[idx][\muted].asInteger,
                     self.tracks[idx][\solo].asInteger
@@ -463,7 +463,7 @@ SynthDef(\golem_lfo, {
         if(lfo[\synth].notNil) {
             lfo[\synth].set(param.asSymbol, value);
         };
-        ~VISUAL_CORTEX.target.sendMsg(
+        ~visual_cortex.target.sendMsg(
             "/golem/lfo/value", trackIdx, lfoIdx, value
         );
     },
@@ -481,14 +481,14 @@ SynthDef(\golem_lfo, {
         OSCdef(\golem_track_mute, { |msg|
             var idx = msg[1].asInteger;
             self.tracks[idx][\muted] = self.tracks[idx][\muted].not;
-            ~VISUAL_CORTEX.target.sendMsg("/golem/track/state", idx,
+            ~visual_cortex.target.sendMsg("/golem/track/state", idx,
                 self.tracks[idx][\muted].asInteger, self.tracks[idx][\solo].asInteger);
         }, "/golem/track/mute");
 
         OSCdef(\golem_track_solo, { |msg|
             var idx = msg[1].asInteger;
             self.tracks[idx][\solo] = self.tracks[idx][\solo].not;
-            ~VISUAL_CORTEX.target.sendMsg("/golem/track/state", idx,
+            ~visual_cortex.target.sendMsg("/golem/track/state", idx,
                 self.tracks[idx][\muted].asInteger, self.tracks[idx][\solo].asInteger);
         }, "/golem/track/solo");
 
@@ -511,7 +511,7 @@ SynthDef(\golem_lfo, {
             var param = msg[2].asSymbol;
             var value = msg[3].asFloat;
             self.tracks[trackIdx][\synthArgs][param] = value;
-            ~VISUAL_CORTEX.target.sendMsg("/golem/engine/state", trackIdx,
+            ~visual_cortex.target.sendMsg("/golem/engine/state", trackIdx,
                 self.tracks[trackIdx][\synthDef], value, value);
         }, "/golem/engine/param");
 
@@ -552,8 +552,8 @@ SynthDef(\golem_lfo, {
         OSCdef(\golem_preset_load, { |msg|
             var trackIdx = msg[1].asInteger;
             var name = msg[2].asSymbol;
-            var preset = ~GOLEM_PATTERNS.factory[name];
-            if(preset.isNil) { preset = ~GOLEM_PATTERNS.loadPreset(name) };
+            var preset = ~golem_patterns.factory[name];
+            if(preset.isNil) { preset = ~golem_patterns.loadPreset(name) };
             if(preset.notNil) {
                 self.tracks[trackIdx][\synthDef] = preset[\synthDef];
                 self.tracks[trackIdx][\synthArgs] = preset[\args].copy;
@@ -563,7 +563,7 @@ SynthDef(\golem_lfo, {
         OSCdef(\golem_preset_save, { |msg|
             var trackIdx = msg[1].asInteger;
             var name = msg[2].asString;
-            ~GOLEM_PATTERNS.savePreset(name, (
+            ~golem_patterns.savePreset(name, (
                 synthDef: self.tracks[trackIdx][\synthDef],
                 args: self.tracks[trackIdx][\synthArgs].copy
             ));
@@ -582,7 +582,7 @@ SynthDef(\golem_lfo, {
                 Synth(track[\synthDef],
                     [\outBus, track[\audioBus].index,
                      \velocity, vel, \gate, 1] ++ track[\synthArgs].asPairs,
-                    target: ~SC_GRP[\te]
+                    target: ~sc_grp[\te]
                 );
             };
         }, "/golem/pad/trigger");
@@ -602,7 +602,7 @@ SynthDef(\golem_lfo, {
         OSCdef(\golem_gen_variation, { |msg|
             var trackIdx = msg[1].asInteger;
             var amount = msg[2] !? { msg[2].asFloat } ?? 0.3;
-            self.tracks[trackIdx][\pattern] = ~GOLEM_PATTERNS.generateVariation(
+            self.tracks[trackIdx][\pattern] = ~golem_patterns.generateVariation(
                 self.tracks[trackIdx][\pattern], amount
             );
         }, "/golem/gen/variation");
@@ -611,7 +611,7 @@ SynthDef(\golem_lfo, {
             var trackIdx = msg[1].asInteger;
             var fillLen = msg[2] !? { msg[2].asInteger } ?? 4;
             var density = msg[3] !? { msg[3].asFloat } ?? 0.75;
-            self.tracks[trackIdx][\pattern] = ~GOLEM_PATTERNS.generateFill(
+            self.tracks[trackIdx][\pattern] = ~golem_patterns.generateFill(
                 self.tracks[trackIdx][\steps], fillLen, density
             );
         }, "/golem/gen/fill");

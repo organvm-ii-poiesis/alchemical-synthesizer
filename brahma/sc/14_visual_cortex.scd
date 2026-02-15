@@ -4,7 +4,7 @@
 */
 
 (
-~VISUAL_CORTEX = (
+~visual_cortex = (
     target: NetAddr("127.0.0.1", 57122), // Node.js server
 
     // Broadcast an update for an entity
@@ -14,21 +14,21 @@
 
     // Broadcast Golem-specific state at 10Hz
     broadcastGolem: { |self|
-        if(~GOLEM.notNil and: { ~GOLEM_SEQ.notNil }) {
+        if(~golem.notNil and: { ~golem_seq.notNil }) {
             // Organism-level update
-            var coherence = ~METRIC_COLLECTOR.measureCoherence(nil);
-            var entropy = ~METRIC_COLLECTOR.measureEntropy(nil);
+            var coherence = ~metric_collector.measureCoherence(nil);
+            var entropy = ~metric_collector.measureEntropy(nil);
             self.target.sendMsg("/golem/organism/update",
-                ~GOLEM[\entityId], "Golem", coherence, entropy);
+                ~golem[\entityId], "Golem", coherence, entropy);
 
             // Sequencer state
             self.target.sendMsg("/golem/seq/state",
-                ~GOLEM_SEQ[\playing].asInteger,
-                ~GOLEM_SEQ[\tempo],
-                ~GOLEM_SEQ[\currentStep]);
+                ~golem_seq[\playing].asInteger,
+                ~golem_seq[\tempo],
+                ~golem_seq[\currentStep]);
 
             // Per-track state
-            ~GOLEM_SEQ[\tracks].do({ |track, i|
+            ~golem_seq[\tracks].do({ |track, i|
                 self.target.sendMsg("/golem/track/state",
                     i,
                     track[\muted].asInteger,
@@ -84,5 +84,5 @@
 );
 
 // Start by default for demo purposes
-~VISUAL_CORTEX.startStream;
+~visual_cortex.startStream;
 )

@@ -55,7 +55,7 @@ SynthDef(\athanor_vco, {
     // Achieved by mixing with a sync'd saw at same frequency
     sig = Select.ar((fmAmt > 0).asInteger.min(1), [
         // When no FM, use SyncSaw for true hard sync if sync signal present
-        Select.ar((In.ar(syncBus, 1).abs.sum > 0.001).asInteger, [
+        Select.ar((In.ar(syncBus, 1).abs > 0.001).asInteger, [
             sig,
             SyncSaw.ar(In.ar(syncBus, 1).abs.max(0.1) * freq, fm_freq)
         ]),
@@ -285,7 +285,7 @@ SynthDef(\athanor_chaos, {
     var synthName = moduleSpec[0];
     var params = moduleSpec[1];
     params.do({ |p|
-        ~PATCH_BAY.registerDestination(
+        ~patch_bay.registerDestination(
             (synthName.asString ++ "_" ++ p[0].asString).asSymbol,
             p[0], synthName.asString ++ " " ++ p[1]
         );
@@ -295,49 +295,49 @@ SynthDef(\athanor_chaos, {
 // ==========================================
 // MODULE REGISTRY REGISTRATION — Modular Oscillators
 // ==========================================
-if(~MODULE_REGISTRY.notNil) {
+if(~module_registry.notNil) {
     // 1. Athanor VCO — Classic VCO with FM and hard sync
-    ~MODULE_REGISTRY.register(\athanor_vco, \modular, \athanor_vco, [
+    ~module_registry.register(\athanor_vco, \modular, \athanor_vco, [
         (\name: \freq, \default: 220, \min: 0.1, \max: 20000, \units: "Hz", \desc: "Frequency"),
         (\name: \wave, \default: 0, \min: 0, \max: 3, \units: "", \desc: "Waveform select (0=saw 1=pulse 2=tri 3=sine)"),
         (\name: \pwm, \default: 0.5, \min: 0.01, \max: 0.99, \units: "", \desc: "Pulse width modulation"),
         (\name: \fmBus, \default: 0, \min: 0, \max: 2048, \units: "bus", \desc: "FM modulator input bus"),
         (\name: \fmAmt, \default: 0, \min: 0, \max: 1, \units: "", \desc: "FM modulation depth (0-8 octaves)"),
         (\name: \syncBus, \default: 0, \min: 0, \max: 2048, \units: "bus", \desc: "Hard sync source bus")
-    ], ~SC_GRP[\te], "Classic VCO with saw/pulse/tri/sine, FM input, and hard sync");
+    ], ~sc_grp[\te], "Classic VCO with saw/pulse/tri/sine, FM input, and hard sync");
 
     // 2. Athanor Super — Unison super oscillator
-    ~MODULE_REGISTRY.register(\athanor_super, \modular, \athanor_super, [
+    ~module_registry.register(\athanor_super, \modular, \athanor_super, [
         (\name: \freq, \default: 220, \min: 0.1, \max: 20000, \units: "Hz", \desc: "Frequency"),
         (\name: \voices, \default: 5, \min: 1, \max: 7, \units: "", \desc: "Number of unison voices"),
         (\name: \spread, \default: 0.5, \min: 0, \max: 1, \units: "", \desc: "Stereo spread of voices"),
         (\name: \detune, \default: 0.1, \min: 0, \max: 1, \units: "", \desc: "Detune depth between voices")
-    ], ~SC_GRP[\te], "1-7 voice unison super oscillator with spread and detune");
+    ], ~sc_grp[\te], "1-7 voice unison super oscillator with spread and detune");
 
     // 3. Athanor Sub — Sub oscillator
-    ~MODULE_REGISTRY.register(\athanor_sub, \modular, \athanor_sub, [
+    ~module_registry.register(\athanor_sub, \modular, \athanor_sub, [
         (\name: \freq, \default: 220, \min: 0.1, \max: 20000, \units: "Hz", \desc: "Frequency"),
         (\name: \octave, \default: 1, \min: 1, \max: 2, \units: "", \desc: "Octave division (1=-1oct 2=-2oct)"),
         (\name: \wave, \default: 0, \min: 0, \max: 1, \units: "", \desc: "Waveform (0=square 1=sine)")
-    ], ~SC_GRP[\te], "Sub oscillator at -1/-2 octaves below input frequency");
+    ], ~sc_grp[\te], "Sub oscillator at -1/-2 octaves below input frequency");
 
     // 4. Athanor Noise — Multi-color noise generator
-    ~MODULE_REGISTRY.register(\athanor_noise, \modular, \athanor_noise, [
+    ~module_registry.register(\athanor_noise, \modular, \athanor_noise, [
         (\name: \type, \default: 0, \min: 0, \max: 5, \units: "", \desc: "Noise type (0=white 1=pink 2=red 3=blue 4=violet 5=crackle)")
-    ], ~SC_GRP[\te], "Six-color noise generator: white, pink, red, blue, violet, crackle");
+    ], ~sc_grp[\te], "Six-color noise generator: white, pink, red, blue, violet, crackle");
 
     // 5. Athanor Dust — Random impulse generator
-    ~MODULE_REGISTRY.register(\athanor_dust, \modular, \athanor_dust, [
+    ~module_registry.register(\athanor_dust, \modular, \athanor_dust, [
         (\name: \density, \default: 1.0, \min: 0.01, \max: 1000, \units: "Hz", \desc: "Impulse density (impulses per second)")
-    ], ~SC_GRP[\te], "Random impulse generator with density control");
+    ], ~sc_grp[\te], "Random impulse generator with density control");
 
     // 6. Athanor Chaos — Chaotic oscillator
-    ~MODULE_REGISTRY.register(\athanor_chaos, \modular, \athanor_chaos, [
+    ~module_registry.register(\athanor_chaos, \modular, \athanor_chaos, [
         (\name: \type, \default: 0, \min: 0, \max: 2, \units: "", \desc: "Attractor type (0=Lorenz 1=Henon 2=Standard)"),
         (\name: \freq, \default: 220, \min: 0.1, \max: 20000, \units: "Hz", \desc: "Oscillator frequency"),
         (\name: \param1, \default: 10, \min: 0.1, \max: 50, \units: "", \desc: "Chaos parameter 1 (sigma/a/k)"),
         (\name: \param2, \default: 28, \min: 0.01, \max: 80, \units: "", \desc: "Chaos parameter 2 (rho/b)")
-    ], ~SC_GRP[\te], "Chaotic oscillator: Lorenz, Henon, and Standard map attractors");
+    ], ~sc_grp[\te], "Chaotic oscillator: Lorenz, Henon, and Standard map attractors");
 
     "  MODULE_REGISTRY: 6 Athanor oscillators registered".postln;
 };

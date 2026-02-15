@@ -4,7 +4,7 @@
 */
 
 (
-~MEASURE = (
+~measure = (
     // Stimuli Generation
     playSineSweep: { |self, bus, start=20, end=20000, dur=5|
         { Sweep.ar(Impulse.ar(1/dur), end-start) + start }.play(s, bus);
@@ -41,28 +41,28 @@
                 fmBell: (centroid: 0.6, flatness: 0.2, bandwidth: 0.4)
             );
 
-            ~GOLEM_SEQ.tracks.do({ |track, i|
+            ~golem_seq.tracks.do({ |track, i|
                 var name = track[\name].asSymbol;
                 var ref = refVectors[name];
 
                 // Trigger the voice and capture spectral metrics
                 if(track[\audioBus].notNil) {
-                    var bus = track[\audioBus];
-                    var syn;
+                    var bus, syn, coherence, entropy;
+                    bus = track[\audioBus];
 
                     "  Track %: % (%)".format(i, name, track[\synthDef]).postln;
 
                     syn = Synth(track[\synthDef],
                         [\outBus, bus.index, \velocity, 0.8, \gate, 1]
                         ++ track[\synthArgs].asPairs,
-                        target: ~SC_GRP[\te]
+                        target: ~sc_grp[\te]
                     );
 
                     0.3.wait;
 
                     // Measure coherence and entropy
-                    var coherence = MetricCollector.measureCoherence(nil);
-                    var entropy = MetricCollector.measureEntropy(nil);
+                    coherence = ~metric_collector.measureCoherence(nil);
+                    entropy = ~metric_collector.measureEntropy(nil);
 
                     "    Coherence: %, Entropy: %".format(
                         coherence.round(0.01), entropy.round(0.01)
@@ -86,28 +86,29 @@
 
     // Quick Golem health check
     golemHealthCheck: { |self|
+        var ok, busCount;
         "--- GOLEM HEALTH CHECK ---".postln;
-        var ok = true;
+        ok = true;
 
         // Check registration
-        if(~BRAHMA_REGISTRY.entities[~GOLEM[\entityId]].notNil) {
-            "  Registry: OK (entity %)".format(~GOLEM[\entityId]).postln;
+        if(~brahma_registry.entities[~golem[\entityId]].notNil) {
+            "  Registry: OK (entity %)".format(~golem[\entityId]).postln;
         } {
             "  Registry: FAIL — Golem not registered".postln;
             ok = false;
         };
 
         // Check bus allocation
-        var busCount = ~GOLEM_SEQ.tracks.count({ |t| t[\audioBus].notNil });
+        busCount = ~golem_seq.tracks.count({ |t| t[\audioBus].notNil });
         "  Buses: % of 8 tracks allocated".format(busCount).postln;
         if(busCount < 8) { ok = false };
 
         // Check equip state
-        "  Equip state: %".format(~GOLEM[\equipState]).postln;
+        "  Equip state: %".format(~golem[\equipState]).postln;
 
         // Check sequencer
         "  Sequencer: % tracks, tempo % BPM, playing: %".format(
-            ~GOLEM_SEQ[\numTracks], ~GOLEM_SEQ[\tempo], ~GOLEM_SEQ[\playing]
+            ~golem_seq[\numTracks], ~golem_seq[\tempo], ~golem_seq[\playing]
         ).postln;
 
         if(ok) {

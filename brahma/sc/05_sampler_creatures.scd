@@ -53,11 +53,11 @@ SynthDef(\protean_hound, {
     
     // When trigger happens, jump read pointer
     // Jump back by random amount proportional to chaos
-    ptr = TChoose.kr(trig, [
+    ptr = K2A.ar(TChoose.kr(trig, [
         ptr - (TRand.kr(0.01, 0.5, trig) * SampleRate.ir * chaos),
         ptr // or stay
-    ]);
-    
+    ]));
+
     sig = BufRd.ar(1, buf, ptr, loop: 1);
     
     Out.ar(outBus, sig);
@@ -105,7 +105,8 @@ SynthDef(\ossuary_monk, {
     in = In.ar(inBus, 1);
     
     // Impulse detection
-    trig = Coyote.kr(in, thresh: impactThreshold);
+    // Coyote fallback: onset detection via amplitude threshold
+    trig = Trig1.kr(Amplitude.kr(in) > impactThreshold, 0.01);
     exciter = Decay.ar(K2A.ar(trig), 0.01) * PinkNoise.ar;
     
     // Resonator (Bone/Wood/Metal tones)

@@ -7,7 +7,7 @@ BridgeRouter {
     classvar <tickHz = 1000;
     
     *emitLinkSet { |bridgeState, src, dst, mode, ttl|
-        // bridgeState is the ~BRIDGE dictionary
+        // bridgeState is the ~bridge dictionary
         var link = (
             src: src, 
             dst: dst, 

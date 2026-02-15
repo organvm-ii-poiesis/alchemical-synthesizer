@@ -105,7 +105,7 @@ SynthDef(\scriptorium_spectrum, {
 // ==========================================
 // MONITORING MANAGER
 // ==========================================
-~SCRIPTORIUM_MONITOR = (
+~scriptorium_monitor = (
     meters: IdentityDictionary.new,
     scopes: IdentityDictionary.new,
     tuners: IdentityDictionary.new,
@@ -324,7 +324,7 @@ SynthDef(\scriptorium_spectrum, {
 );
 
 // Initialize on load
-~SCRIPTORIUM_MONITOR.init;
+~scriptorium_monitor.init;
 
 // ==========================================
 // OSC RESPONDERS
@@ -334,19 +334,19 @@ SynthDef(\scriptorium_spectrum, {
 OSCdef(\scriptorium_meter_add, { |msg|
     var name = msg[1].asString;
     var inBus = msg[2].asInteger;
-    ~SCRIPTORIUM_MONITOR.addMeter(name, inBus);
+    ~scriptorium_monitor.addMeter(name, inBus);
 }, "/scriptorium/meter/add");
 
 // /scriptorium/meter/addStereo <name:string> <inBus:int>
 OSCdef(\scriptorium_meter_add_stereo, { |msg|
     var name = msg[1].asString;
     var inBus = msg[2].asInteger;
-    ~SCRIPTORIUM_MONITOR.addStereoMeter(name, inBus);
+    ~scriptorium_monitor.addStereoMeter(name, inBus);
 }, "/scriptorium/meter/addStereo");
 
 // /scriptorium/meter/remove <name:string>
 OSCdef(\scriptorium_meter_remove, { |msg|
-    ~SCRIPTORIUM_MONITOR.freeMeter(msg[1].asString);
+    ~scriptorium_monitor.freeMeter(msg[1].asString);
 }, "/scriptorium/meter/remove");
 
 // /scriptorium/scope/add <name:string> <inBus:int> [scopeFrames:int]
@@ -354,44 +354,44 @@ OSCdef(\scriptorium_scope_add, { |msg|
     var name = msg[1].asString;
     var inBus = msg[2].asInteger;
     var frames = msg[3] !? _.asInteger ?? 1024;
-    ~SCRIPTORIUM_MONITOR.addScope(name, inBus, frames);
+    ~scriptorium_monitor.addScope(name, inBus, frames);
 }, "/scriptorium/scope/add");
 
 // /scriptorium/scope/remove <name:string>
 OSCdef(\scriptorium_scope_remove, { |msg|
-    ~SCRIPTORIUM_MONITOR.freeScope(msg[1].asString);
+    ~scriptorium_monitor.freeScope(msg[1].asString);
 }, "/scriptorium/scope/remove");
 
 // /scriptorium/tuner/add <name:string> <inBus:int>
 OSCdef(\scriptorium_tuner_add, { |msg|
     var name = msg[1].asString;
     var inBus = msg[2].asInteger;
-    ~SCRIPTORIUM_MONITOR.addTuner(name, inBus);
+    ~scriptorium_monitor.addTuner(name, inBus);
 }, "/scriptorium/tuner/add");
 
 // /scriptorium/tuner/remove <name:string>
 OSCdef(\scriptorium_tuner_remove, { |msg|
-    ~SCRIPTORIUM_MONITOR.freeTuner(msg[1].asString);
+    ~scriptorium_monitor.freeTuner(msg[1].asString);
 }, "/scriptorium/tuner/remove");
 
 // /scriptorium/monitor/start — begin OSC broadcast
 OSCdef(\scriptorium_monitor_start, {
-    ~SCRIPTORIUM_MONITOR.startBroadcast;
+    ~scriptorium_monitor.startBroadcast;
 }, "/scriptorium/monitor/start");
 
 // /scriptorium/monitor/stop — halt OSC broadcast
 OSCdef(\scriptorium_monitor_stop, {
-    ~SCRIPTORIUM_MONITOR.stopBroadcast;
+    ~scriptorium_monitor.stopBroadcast;
 }, "/scriptorium/monitor/stop");
 
 // /scriptorium/monitor/status
 OSCdef(\scriptorium_monitor_status, {
-    ~SCRIPTORIUM_MONITOR.status;
+    ~scriptorium_monitor.status;
 }, "/scriptorium/monitor/status");
 
 // /scriptorium/monitor/freeAll
 OSCdef(\scriptorium_monitor_free_all, {
-    ~SCRIPTORIUM_MONITOR.freeAll;
+    ~scriptorium_monitor.freeAll;
 }, "/scriptorium/monitor/freeAll");
 
 "--- BRAHMA: SCRIPTORIUM Monitoring Online ---".postln;

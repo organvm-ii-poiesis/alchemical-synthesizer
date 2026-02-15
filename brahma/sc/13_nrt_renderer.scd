@@ -3,7 +3,7 @@
 */
 
 (
-~NRT_RENDERER = (
+~nrt_renderer = (
 
     // Render a "Specimen" to disk
     // Input: A 10-second audio file (The "Food")
