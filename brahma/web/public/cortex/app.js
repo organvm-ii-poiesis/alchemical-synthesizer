@@ -10,6 +10,7 @@ import { PatchMatrixView } from "./components/patch-matrix.js";
 import { ChronosPanelView } from "./components/chronos-panel.js";
 import { DaemonPanelView } from "./components/daemon-panel.js";
 import { SerpensPanelView } from "./components/serpens-panel.js";
+import { CanvasView } from "./components/canvas-view.js";
 
 // ==========================================
 // APPLICATION STATE
@@ -95,6 +96,8 @@ osc.on("/brahma/registry/params/done", (args) => {
     if (state.selectedModule === moduleName && views.modules) {
         views.modules.renderParams();
     }
+    // Notify canvas view so it can populate node params
+    if (views.canvas) views.canvas.onParamsLoaded(moduleName);
 });
 
 // Transport state
@@ -169,6 +172,9 @@ function initViews() {
     );
     views.serpens = new SerpensPanelView(
         document.getElementById("view-serpens"), state, osc
+    );
+    views.canvas = new CanvasView(
+        document.getElementById("view-canvas"), state, osc
     );
 }
 

@@ -311,3 +311,299 @@
 }
 .demo-status.active { color: #22c55e; }
 .demo-status.inactive { color: var(--text-muted); }
+
+/* ═══════════════════════════════════════════
+   CANVAS — Visual Patching View
+   ═══════════════════════════════════════════ */
+
+/* Canvas view needs full height — override #main padding */
+#main:has(#view-canvas.active) { padding: 0; overflow: hidden; }
+#view-canvas.active { display: block; height: calc(100vh - 48px); overflow: hidden; }
+
+/* Layout */
+.canvas-layout {
+    display: flex;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* Palette sidebar */
+.canvas-palette {
+    width: 240px;
+    min-width: 240px;
+    background: var(--bg-card);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    transition: width 0.2s, min-width 0.2s;
+}
+.canvas-palette.collapsed {
+    width: 36px;
+    min-width: 36px;
+    overflow: hidden;
+}
+
+.palette-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+}
+.palette-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+}
+.palette-collapse-btn,
+.palette-expand-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 12px;
+    padding: 2px 6px;
+}
+.palette-collapse-btn:hover,
+.palette-expand-btn:hover { color: var(--text); }
+.palette-expand-btn {
+    margin: 8px auto;
+    display: block;
+}
+
+.palette-search {
+    margin: 8px;
+    background: var(--bg-control);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-family: inherit;
+    font-size: 11px;
+    outline: none;
+}
+.palette-search:focus { border-color: var(--accent); }
+.palette-search::placeholder { color: var(--text-muted); }
+
+.palette-categories {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    padding: 0 8px 8px;
+}
+.palette-cat-btn {
+    background: var(--bg-control);
+    border: 1px solid transparent;
+    color: var(--text-muted);
+    padding: 2px 7px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 9px;
+    transition: all 0.12s;
+}
+.palette-cat-btn:hover { color: var(--text); border-color: var(--border); }
+.palette-cat-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--text); }
+
+.palette-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 8px 8px;
+}
+
+.palette-group-header {
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--text-accent);
+    letter-spacing: 0.5px;
+    margin: 10px 0 4px;
+}
+
+.palette-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: grab;
+    transition: background 0.1s;
+    user-select: none;
+}
+.palette-item:hover { background: var(--bg-control); }
+.palette-item:active { cursor: grabbing; }
+
+.palette-item-name {
+    font-size: 11px;
+    color: var(--text);
+}
+.palette-item-meta {
+    font-size: 9px;
+    color: var(--text-muted);
+}
+
+.palette-empty {
+    font-size: 11px;
+    color: var(--text-muted);
+    padding: 12px;
+    text-align: center;
+}
+
+/* Workspace */
+.canvas-workspace {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+}
+
+/* Toolbar */
+.canvas-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.toolbar-btn {
+    background: var(--bg-control);
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 28px;
+    height: 24px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.12s;
+}
+.toolbar-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+.toolbar-label {
+    font-size: 11px;
+    color: var(--text);
+    min-width: 40px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+.toolbar-label-muted { color: var(--text-muted); }
+
+.toolbar-sep {
+    width: 1px;
+    height: 16px;
+    background: var(--border);
+    margin: 0 4px;
+}
+
+/* SVG Canvas */
+.canvas-svg {
+    flex: 1;
+    display: block;
+    background: var(--bg);
+    cursor: default;
+}
+
+/* Nodes */
+.canvas-node { cursor: default; }
+.canvas-node .node-bg {
+    fill: var(--bg-card);
+    stroke: var(--border);
+    stroke-width: 1;
+}
+.canvas-node.selected .node-bg {
+    stroke: var(--accent);
+    stroke-width: 2;
+}
+
+.canvas-node .node-header {
+    fill: var(--bg-control);
+    cursor: grab;
+}
+.canvas-node .node-header:active { cursor: grabbing; }
+
+.canvas-node .node-title {
+    fill: var(--text);
+    font-family: "SF Mono", "Fira Code", monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    cursor: grab;
+}
+
+.canvas-node .node-close-text {
+    fill: var(--text-muted);
+    font-size: 14px;
+    cursor: pointer;
+}
+.canvas-node .node-close:hover .node-close-text { fill: #ef4444; }
+
+/* Ports */
+.port-circle {
+    fill: var(--bg);
+    stroke-width: 2;
+    transition: all 0.12s;
+}
+.port:hover .port-circle {
+    stroke-width: 3;
+    r: 8;
+}
+.port-circle.port-valid-target {
+    fill: #22c55e;
+    stroke: #22c55e;
+    animation: port-pulse 0.8s ease-in-out infinite;
+}
+
+@keyframes port-pulse {
+    0%, 100% { r: 6; opacity: 1; }
+    50% { r: 8; opacity: 0.7; }
+}
+
+.port-label {
+    fill: var(--text-muted);
+    font-family: "SF Mono", "Fira Code", monospace;
+    font-size: 9px;
+}
+
+/* Node params (inside foreignObject) */
+.node-params {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 2px;
+}
+.node-params .knob-wrap {
+    transform: scale(0.8);
+    transform-origin: top left;
+}
+
+/* Cables */
+.cable {
+    transition: stroke-width 0.12s, stroke-opacity 0.12s;
+}
+.cable-hit:hover + .cable,
+.cable:hover {
+    stroke-width: 3.5;
+    stroke-opacity: 1;
+}
+
+.cable-preview {
+    pointer-events: none;
+    animation: cable-dash 0.5s linear infinite;
+}
+
+@keyframes cable-dash {
+    to { stroke-dashoffset: -12; }
+}
+
+/* Rubber band selection */
+.rubber-band {
+    pointer-events: none;
+}
