@@ -8,9 +8,9 @@ The **Alchemical Synthesizer** (Brahma Meta-Rack) is a modular synthesis organis
 
 ## Technology Stack
 
-- **SuperCollider** (`brahma/sc/`): DSP engine, trait registries, state machines (~18,000 LOC across 60+ files)
-- **Pure Data** (`brahma/pd/`): Performance UI, faceplate abstractions, OSC control surface
-- **Node.js + p5.js** (`brahma/web/`): Visual Cortex — real-time browser visualization via OSC-to-WebSocket bridge
+- **SuperCollider** (`brahma/sc/`): DSP engine, trait registries, state machines (~20,000 LOC across 60+ files, 6 classes)
+- **Pure Data** (`brahma/pd/`): Performance UI, faceplate abstractions, OSC control surface, visual patching canvas (12 patches: 8 core + 4 canvas/)
+- **Node.js + p5.js** (`brahma/web/`): Visual Cortex organism viz, Canvas patching UI (`/cortex`), Golem percussion UI (`/golem`)
 - **Python** (`tools/`): Audio specimen validation utilities
 - **OSC**: Bidirectional glue between all layers
 
@@ -40,7 +40,7 @@ Example: `/brahma/organism/update 1001 "Relinquished" 0.65 2.3`
 ### Pure Data OSC Bridge
 
 - **Receive**: `netreceive` on port 57121 (UDP, binary) → `oscparse` → `route /sc /golem /brahma /chronos /daemon /patch`
-- **Send**: `netsend` to 127.0.0.1:57120
+- **Send**: `oscformat` → `netsend` to 127.0.0.1:57120
 - Enables bidirectional PD ↔ SC communication across all OSC namespaces
 
 ## Running the System
@@ -57,7 +57,10 @@ Server configuration: 2048 audio buses, 8192 control buses, expanded memory (819
 ### Pure Data (UI layer)
 ```bash
 # Open brahma/pd/main.pd in Pd Vanilla (v0.54+)
-# This is the master patching surface with OSC bridge to SC
+# This is the master control surface with OSC bridge to SC
+
+# For visual patching, also open:
+# brahma/pd/canvas/brahma_canvas.pd — Pd-native visual patching via GOP abstractions
 ```
 
 ### Visual Cortex (web visualization)
@@ -107,8 +110,8 @@ After installing, recompile the class library (Cmd+Shift+L in SC IDE).
 12. `15_*` — Golem Percussion Organism (percussion suite, FX, patterns, sequencer)
 13. `16_*` — Synthesis Engines (10 engines: Prima Materia, Azoth, Quintessence, Ouroboros, Chrysopoeia, Homunculus, Buchlaeus, Logos, Tetramorph, Nebula)
 14. `17-20_*` — Make Noise module clones (functions, filters, time, oscillators, sequencers, utilities)
-15. `21-22_*` — Effects Rack (46 FX: dynamics, EQ, distortion, modulation, spatial, spectral, time)
-16. `23-24_*` — Standard Modular modules (oscillators, filters, amplifiers, envelopes, modulation, clock, sequencers, utilities)
+15. `21-22_*` — Effects Rack (49 FX: dynamics, EQ, distortion, modulation, spatial, spectral, time)
+16. `23-24_*` — Standard Modular modules (58 SynthDefs: oscillators, filters, amplifiers, envelopes, modulation, clock, sequencers, utilities)
 17. `25_*` — Elektron machine emulations (Analog machines, Octatrack)
 18. `26_*` — Interaction & controllers (MIDI controllers, sensors)
 19. `27_*` — Generative systems (Lorenz, Markov, Cellular Automata, chaos attractors + generative sequencers)
@@ -172,6 +175,11 @@ State machine for cumulative identity integration with four phases:
 - `~CHRONOS` — Master sequencer state (transport, tracks, scenes, undo/redo, song mode)
 - `~NRT_RENDERER` — Non-real-time rendering interface
 - `~GOLEM` / `~GOLEM_SEQ` — Golem percussion organism and sequencer state
+- `~PD_BRIDGE` — Pure Data OSC bridge state (NetAddr, responders)
+- `~MODULE_REGISTRY` — Dynamic SynthDef registration with OSC-addressable lifecycle
+- `~DEMO_PATCH` — Auto-playing demo patch state (Prima Materia + MOIRAI + Euclidean + Lorenz + reverb)
+- `~MOIRAI` — Generative melody/sequence system
+- `~GENESIS` — System initialization and boot orchestration state
 
 ### Validation & Metrics Infrastructure
 
@@ -209,8 +217,14 @@ Methods: `measureCoherence`, `measureFidelity`, `measureStress`, `measureEntropy
    - **macro_panel.pd**: Performance control (12 continuous + 8 triggers)
    - **faceplate_14.pd, faceplate_18.pd, faceplate_24.pd**: Module faceplates (HP standardization)
 
-3. **Low-Level Pd Objects**
-   - `netreceive` (UDP), `netsend`, `oscparse`, `route`, `number~`, `bang`, etc.
+3. **Canvas Abstractions** (`brahma/pd/canvas/`)
+   - **brahma_canvas.pd**: Master visual patching surface — instantiates palette, module slots, and routing
+   - **brahma_module.pd**: GOP module abstraction — inlet/outlet ports, parameter controls, label display
+   - **brahma_route.pd**: Cable routing abstraction — signal connection management between modules
+   - **brahma_palette.pd**: Module palette — browse and instantiate available modules onto the canvas
+
+4. **Low-Level Pd Objects**
+   - `netreceive` (UDP), `netsend`, `oscformat`, `oscparse`, `route`, `number~`, `bang`, etc.
 
 #### Master Clock Synchronization
 Formula: `60000 / BPM = metro_interval_ms`
@@ -325,11 +339,10 @@ AdamKadmon.validateTraitMap(~trait_map);  // Returns true if valid
 ```
 
 ### Monitor Visualization
-Navigate to `http://localhost:3000` while SuperCollider and Node.js are running. Organisms appear as circles with:
-- 16 color-coded organism types (cyan=Proteus, red=Relinquished, orange=Golem, violet=Typhon, green=AgentSmith, etc.)
-- Radius proportional to coherence
-- Jitter proportional to entropy
-- Auto-reconnecting WebSocket (3s retry)
+While SuperCollider and Node.js are running:
+- `http://localhost:3000` — Organism visualization (circles with coherence/entropy mapping)
+- `http://localhost:3000/cortex` — Canvas patching UI (module browser, drag-drop, cable routing)
+- `http://localhost:3000/golem` — Golem percussion UI (sequencer, mixer, patchbay, automation)
 
 ### Run Offline Specimen Processing
 ```supercollider
