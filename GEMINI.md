@@ -80,3 +80,22 @@ Every primary module (e.g., **Relinquished**) adheres to a strict stage specific
 - [ ] Implement actual `FluidBuf` analysis in `MetricCollector`.
 - [ ] Expand `AdamKadmon` to include a full JSON-based contract system.
 - [ ] Create 3D visualizations for trait maps in a browser-based overlay.
+
+<!-- ORGANVM:AUTO:START -->
+## System Context (auto-generated — do not edit)
+
+**Organ:** ORGAN-II (Art) | **Tier:** standard | **Status:** LOCAL
+**Org:** `unknown` | **Repo:** `alchemical-synthesizer`
+
+### Edges
+- **Produces** → `unknown`: unknown
+- **Consumes** ← `ORGAN-I`: unknown
+
+### Siblings in Art
+`core-engine`, `performance-sdk`, `example-generative-music`, `metasystem-master`, `example-choreographic-interface`, `showcase-portfolio`, `archive-past-works`, `case-studies-methodology`, `learning-resources`, `example-generative-visual`, `example-interactive-installation`, `example-ai-collaboration`, `docs`, `a-mavs-olevm`, `a-i-council--coliseum` ... and 14 more
+
+### Governance
+- Consumes Theory (I) concepts, produces artifacts for Commerce (III).
+
+*Last synced: 2026-02-24T12:41:28Z*
+<!-- ORGANVM:AUTO:END -->
