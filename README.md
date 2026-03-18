@@ -205,3 +205,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 *"Mastery does not come from precision but from learning when to let the instrument consume you back."*
+
+<!-- SYSTEM-NAV-START -->
+
+---
+
+<sub>[Portfolio](https://4444j99.github.io/portfolio/) · [System Directory](https://4444j99.github.io/portfolio/directory/) · [ORGAN II · Poiesis](https://organvm-ii-poiesis.github.io/) · Part of the <a href="https://4444j99.github.io/portfolio/directory/">ORGANVM eight-organ system</a></sub>
+
+<!-- SYSTEM-NAV-END -->
