@@ -1,8 +1,25 @@
 schema_version: '1.0'
 repo: alchemical-synthesizer
 organ: II
-display_name: "Alchemical Synthesizer (Brahma) \u2014 Python creative tools and alchemical\
-  \ process framework"
+display_name: "Alchemical Synthesizer (Brahma) — Python creative tools and alchemical process framework"
+
 delivery:
-- platform: web_app
+- platform: python_library
+  status: in_progress
+  priority: critical
+  notes: "JavaScript package for alchemical creative processes"
+  next_action: "Complete core synthesis pipeline and publish"
+
+content:
+- platform: docs_site
   status: not_started
+  priority: high
+  notes: "Process reference mapping alchemical stages to creative operations"
+  next_action: "Document synthesis pipeline and stage transitions"
+
+community:
+- platform: discord
+  status: not_started
+  priority: low
+  notes: "Creative coders exploring alchemical process frameworks"
+  next_action: "Create after v1.0 release"
